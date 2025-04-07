@@ -1,37 +1,46 @@
-interface UrlAnalysisResult {
-  risk: number; // 0-1 score
-  flags: string[];
-  brandMatches: boolean;
-  suspiciousPatterns: string[];
-  typosquatting?: string; // Original brand name if typosquatting detected
-}
+import { UrlAnalysisResult } from './types';
+import { URLFeatures } from './URLFeatures';
+import { BrandDetector } from './BrandDetector';
 
 export class UrlAnalyzer {
-  private suspiciousKeywords = [
-    'login', 'signin', 'account', 'secure', 'verify', 'update', 'confirm',
-    'banking', 'password', 'credential'
-  ];
+  private static readonly RISK_THRESHOLDS = {
+    LOW: 0.25,
+    MEDIUM: 0.5,
+    HIGH: 0.75
+  };
 
-  private commonBrands = [
-    'google', 'facebook', 'apple', 'microsoft', 'amazon', 'paypal',
-    'netflix', 'linkedin', 'twitter', 'instagram', 'bank'
-  ];
+  private static readonly RISK_WEIGHTS = {
+    // Critical risk factors
+    IP_ADDRESS: 0.8,
+    DATA_URI: 0.9,
+    HOMOGRAPH_ATTACK: 0.9,
+    BRAND_IMPERSONATION: 0.9,
+    
+    // High risk factors
+    SUSPICIOUS_TLD: 0.7,
+    SUSPICIOUS_KEYWORDS: 0.75,
+    BRAND_MISUSE: 0.8,
+    CRYPTO_SCAM: 0.8,
+    SUSPICIOUS_FILE: 0.7,
+    
+    // Medium risk factors
+    SPECIAL_CHARS: 0.6,
+    NUMERIC_DOMAIN: 0.6,
+    SUSPICIOUS_HOSTING: 0.65,
+    EXCESSIVE_ENCODING: 0.6,
+    REDIRECT: 0.6,
+    
+    // Lower risk factors
+    UNCOMMON_TLD: 0.4,
+    EXCESSIVE_SUBDOMAINS: 0.4,
+    
+    // Cumulative risk factors
+    COMBINED_THREATS: 0.5
+  };
 
-  private tldList = ['.com', '.org', '.net', '.edu', '.gov'];
-  private commonTLDs = new Set(['.com', '.org', '.net', '.edu', '.gov', '.io', '.co', '.biz', '.info']);
-  private suspiciousFileExtensions = new Set(['.exe', '.zip', '.scr', '.js', '.msi', '.bat', '.dll']);
-  private commonHostingProviders = new Set([
-    'godaddysites.com',
-    'wcomhost.com',
-    'weebly.com',
-    'netlify.com',
-    'azurewebsites.net',
-    'herokuapp.com',
-    'cloudaccess.host',
-    '16mb.com',
-    'ngrok.io'
-  ]);
-
+  /**
+   * Analyzes a URL for phishing indicators
+   */
   analyzeUrl(url: string): UrlAnalysisResult {
     const result: UrlAnalysisResult = {
       risk: 0,
@@ -41,301 +50,227 @@ export class UrlAnalyzer {
     };
 
     try {
-      // Add protocol if missing to prevent URL parse errors
-      const urlToAnalyze = url.startsWith('http') ? url : `http://${url}`;
-      const urlObj = new URL(urlToAnalyze);
-      
-      // Check for special characters in URL
-      if (/@/.test(url) || /[<>{}|\\\^\[\]]/.test(url)) {
-        result.flags.push('SPECIAL_CHARS_IN_DOMAIN');
-        result.risk += 0.25;
+      // Extract URL features
+      const features = URLFeatures.extractFeatures(url);
+      result.features = features;
+
+      if (features.isInvalid) {
+        result.flags.push('INVALID_URL');
+        result.risk = 1;
+        return result;
       }
 
-      // Check for IP address in hostname
-      if (this.isIpAddress(urlObj.hostname)) {
-        result.flags.push('IP_ADDRESS_URL');
-        result.risk += 0.3;
-      }
+      // Analyze for brand impersonation and homograph attacks
+      const brandDetection = BrandDetector.analyzeForBrandImpersonation(
+        features.domain,
+        features.fullDomain,
+        features.tld
+      );
+      result.brandDetection = brandDetection;
 
-      // Check for numeric prefix in domain (very common in phishing)
-      const mainDomainPart = urlObj.hostname.split('.')[0];
-      if (/^\d+/.test(mainDomainPart)) {
-        result.flags.push('NUMERIC_PREFIX');
-        result.risk += 0.3;
-      }
+      // Add risk factors based on technical indicators
+      this.addTechnicalRiskFactors(result, features);
 
-      // Check for common hosting providers often used in phishing
-      for (const provider of this.commonHostingProviders) {
-        if (urlObj.hostname.endsWith(provider)) {
-          result.flags.push('SUSPICIOUS_HOSTING');
-          result.risk += 0.3;
-          break;
-        }
-      }
+      // Add risk factors based on brand impersonation
+      this.addBrandImpersonationRiskFactors(result, brandDetection);
 
-      // Enhanced TLD check
-      const tld = this.extractTLD(urlObj.hostname);
-      if (!this.commonTLDs.has(tld)) {
-        result.flags.push('UNCOMMON_TLD');
-        // Higher risk for known suspicious TLDs
-        if (['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz'].includes(tld)) {
-          result.risk += 0.4;
-        } else {
-          result.risk += 0.2;
-        }
-      }
+      // Add risk factors based on content patterns
+      this.addContentPatternRiskFactors(result, features);
 
-      // Check for suspicious file extensions
-      const pathExt = this.getFileExtension(urlObj.pathname);
-      if (pathExt && this.suspiciousFileExtensions.has(pathExt.toLowerCase())) {
-        result.flags.push('SUSPICIOUS_FILE_EXTENSION');
-        result.risk += 0.25;
-      }
-
-      // Enhanced brand impersonation and typosquatting check
-      const domainParts = urlObj.hostname.toLowerCase().split('.');
-      // Use the second-to-last part for domains like google.com, or the third-to-last for www.google.com
-      const mainDomain = domainParts.length > 1 ? 
-        (domainParts[0] === 'www' && domainParts.length > 2 ? domainParts[1] : domainParts[domainParts.length - 2]) :
-        domainParts[0];
-
-      // Normalize domain for better brand detection
-      const normalizedDomain = this.normalizeString(mainDomain);
-      
-      // Check for brand impersonation in any part of the hostname
-      const fullHostName = urlObj.hostname.toLowerCase();
-      const normalizedHostname = this.normalizeString(fullHostName);
-      
-      for (const brand of this.commonBrands) {
-        // Skip if it's the legitimate brand domain
-        if (mainDomain === brand) continue;
-        
-        // Check for brand name anywhere in the hostname
-        if (normalizedHostname.includes(brand)) {
-          result.flags.push('BRAND_IMPERSONATION');
-          result.brandMatches = true;
-          result.typosquatting = brand;
-          result.risk += 0.4;
-          break;
-        }
-        
-        // Check for typosquatting
-        const distance = this.levenshteinDistance(normalizedDomain, brand);
-        const maxAllowedDistance = brand.length <= 5 ? 1 : 2;
-        
-        if (distance > 0 && distance <= maxAllowedDistance) {
-          result.flags.push('TYPOSQUATTING');
-          result.brandMatches = true;
-          result.typosquatting = brand;
-          result.risk += 0.4;
-          break;
-        }
-      }
-
-      // Base risk adjustment for legitimate domains
-      if (this.commonBrands.includes(mainDomain)) {
-        // If it's a legitimate brand domain with no flags yet, keep risk very low
-        if (result.flags.length === 0) {
-          result.risk = 0.1;
-        } else {
-          result.risk = Math.max(0.1, result.risk - 0.3);
-        }
-      }
-
-      // Check for suspicious keywords in URL
-      for (const keyword of this.suspiciousKeywords) {
-        if (url.toLowerCase().includes(keyword)) {
-          result.suspiciousPatterns.push(keyword);
-          result.risk += 0.1;
-        }
-      }
-
-      // Check for excessive subdomains
-      const subdomainCount = urlObj.hostname.split('.').length - 2;
-      if (subdomainCount > 2) {
-        result.flags.push('EXCESSIVE_SUBDOMAINS');
-        result.risk += 0.15 * (subdomainCount - 2); // Increasing risk with more subdomains
-      }
-
-      // Check for numeric domain
-      if (/^\d+$/.test(urlObj.hostname.split('.')[0])) {
-        result.flags.push('NUMERIC_DOMAIN');
-        result.risk += 0.2;
-      }
-
-      // Check for data URI scheme
-      if (url.startsWith('data:')) {
-        result.flags.push('DATA_URI_SCHEME');
-        result.risk += 0.5;
-      }
-
-      // Check for URL encoding abuse
-      if (this.hasExcessiveEncoding(url)) {
-        result.flags.push('EXCESSIVE_ENCODING');
-        result.risk += 0.3;
-      }
-
-      // Check for redirect in URL
-      if (url.includes('redirect') || url.includes('url=') || url.includes('goto=')) {
-        result.flags.push('REDIRECT_PRESENT');
-        result.risk += 0.15;
-      }
-
-      // Reduce risk for well-known legitimate domains
-      if (this.isLegitimateHosting(urlObj.hostname)) {
-        result.risk = Math.max(0.1, result.risk - 0.3);
-      }
+      // Apply special rules for legitimate domains
+      this.applyLegitimateDomainsRules(result);
 
       // Cap the risk score at 1
-      result.risk = Math.min(result.risk, 1);
+      result.risk = Math.min(1, result.risk);
 
     } catch (error) {
-      result.flags.push('INVALID_URL');
+      result.flags.push('ANALYSIS_ERROR');
       result.risk = 1;
     }
 
     return result;
   }
 
-  private extractTLD(hostname: string): string {
-    const parts = hostname.split('.');
-    return parts.length > 1 ? '.' + parts[parts.length - 1] : '';
-  }
-
-  private getFileExtension(path: string): string | null {
-    const match = path.match(/\.[^.\/]+$/);
-    return match ? match[0] : null;
-  }
-
-  private checkBrandImpersonation(domain: string): { impersonated: boolean; originalBrand?: string } {
-    for (const brand of this.commonBrands) {
-      // Exact match means it's legitimate
-      if (domain === brand) {
-        return { impersonated: false };
-      }
-
-      // Check for character substitution
-      const normalized = this.normalizeString(domain);
-      if (normalized === brand && domain !== brand) {
-        return { impersonated: true, originalBrand: brand };
-      }
-      
-      // Check for brand name within domain (for example googgle contains google)
-      if (domain !== brand && domain.includes(brand)) {
-        return { impersonated: true, originalBrand: brand };
-      }
-
-      // Check for typosquatting using Levenshtein distance
-      const distance = this.levenshteinDistance(domain, brand);
-      
-      // More lenient distance for typosquatting detection
-      // For short brands, allow 1 character difference
-      // For longer brands, allow up to 2 character differences
-      const maxAllowedDistance = brand.length <= 5 ? 1 : 2;
-      
-      if (distance > 0 && distance <= maxAllowedDistance) {
-        return { impersonated: true, originalBrand: brand };
-      }
-      
-      // Check for keyboard-adjacent typos
-      if (domain.length === brand.length && this.areCharactersAdjacent(domain, brand)) {
-        return { impersonated: true, originalBrand: brand };
-      }
-
-      // Better check for repeated characters (e.g., googgle)
-      if (domain !== brand && 
-          domain.length > brand.length && 
-          domain.replace(/(.)(?=\1)/g, '') === brand.replace(/(.)(?=\1)/g, '')) {
-        return { impersonated: true, originalBrand: brand };
-      }
-    }
-    return { impersonated: false };
-  }
-
-  private areCharactersAdjacent(str1: string, str2: string): boolean {
-    const keyboard = {
-      'q': ['w','a'], 'w': ['q','e','s'], 'e': ['w','r','d'], 'r': ['e','t','f'], 't': ['r','y','g'],
-      'y': ['t','u','h'], 'u': ['y','i','j'], 'i': ['u','o','k'], 'o': ['i','p','l'], 'p': ['o','['],
-      'a': ['q','s','z'], 's': ['w','a','d','x'], 'd': ['e','s','f','c'], 'f': ['r','d','g','v'],
-      'g': ['t','f','h','b'], 'h': ['y','g','j','n'], 'j': ['u','h','k','m'], 'k': ['i','j','l'],
-      'l': ['o','k',';'], 'z': ['a','x'], 'x': ['s','z','c'], 'c': ['d','x','v'],
-      'v': ['f','c','b'], 'b': ['g','v','n'], 'n': ['h','b','m'], 'm': ['j','n']
-    };
-
-    if (str1.length !== str2.length) return false;
-
-    for (let i = 0; i < str1.length; i++) {
-      if (str1[i] !== str2[i]) {
-        const adjacent = keyboard[str2[i]] || [];
-        if (!adjacent.includes(str1[i])) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  private hasExcessiveEncoding(url: string): boolean {
-    const percentCount = (url.match(/%[0-9A-Fa-f]{2}/g) || []).length;
-    return percentCount > 3;
-  }
-
-  private normalizeString(str: string): string {
-    return str
-      .replace(/0/g, 'o')
-      .replace(/1/g, 'l')
-      .replace(/5/g, 's')
-      .replace(/\$/g, 's')
-      .replace(/@/g, 'a');
-  }
-
-  private levenshteinDistance(str1: string, str2: string): number {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= str1.length; i++) {
-      matrix[i] = [i];
+  /**
+   * Adds risk factors based on technical URL characteristics
+   */
+  private addTechnicalRiskFactors(result: UrlAnalysisResult, features: ReturnType<typeof URLFeatures.extractFeatures>): void {
+    if (features.hasIPAddress) {
+      result.flags.push('IP_ADDRESS_URL');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.IP_ADDRESS;
     }
 
-    for (let j = 0; j <= str2.length; j++) {
-      matrix[0][j] = j;
+    if (features.hasUncommonTLD) {
+      result.flags.push('UNCOMMON_TLD');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.UNCOMMON_TLD;
     }
 
-    for (let i = 1; i <= str1.length; i++) {
-      for (let j = 1; j <= str2.length; j++) {
-        if (str1[i-1] === str2[j-1]) {
-          matrix[i][j] = matrix[i-1][j-1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i-1][j-1] + 1,
-            matrix[i][j-1] + 1,
-            matrix[i-1][j] + 1
-          );
-        }
+    if (features.hasSuspiciousTLD) {
+      result.flags.push('SUSPICIOUS_TLD');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.SUSPICIOUS_TLD;
+    }
+
+    if (features.hasExcessiveSubdomains) {
+      result.flags.push('EXCESSIVE_SUBDOMAINS');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.EXCESSIVE_SUBDOMAINS;
+      // Add extra risk for each additional subdomain beyond 2
+      if (features.subdomainCount > 2) {
+        result.risk += (features.subdomainCount - 2) * 0.1;
       }
     }
 
-    return matrix[str1.length][str2.length];
-  }
-
-  private isIpAddress(hostname: string): boolean {
-    // Simple IPv4 check
-    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    if (ipv4Regex.test(hostname)) {
-      const parts = hostname.split('.');
-      return parts.every(part => {
-        const num = parseInt(part);
-        return num >= 0 && num <= 255;
-      });
+    if (features.hasSpecialChars) {
+      result.flags.push('SPECIAL_CHARS_IN_DOMAIN');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.SPECIAL_CHARS;
     }
-    return false;
+
+    if (features.hasNumericDomain) {
+      result.flags.push('NUMERIC_PREFIX');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.NUMERIC_DOMAIN;
+    }
+
+    if (features.usesSuspiciousHosting) {
+      result.flags.push('SUSPICIOUS_HOSTING');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.SUSPICIOUS_HOSTING;
+    }
+
+    // Add risk for suspicious keywords in domain
+    if (features.hasSuspiciousKeywords) {
+      result.flags.push('SUSPICIOUS_KEYWORDS');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.SUSPICIOUS_KEYWORDS;
+      result.suspiciousPatterns.push('suspicious_keywords');
+    }
+
+    // Add risk for brand keywords in suspicious domains
+    if (features.hasBrandKeywords && !this.isLegitimateHosting(features.fullDomain)) {
+      result.flags.push('BRAND_KEYWORD_MISUSE');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.BRAND_MISUSE;
+      result.suspiciousPatterns.push('brand_misuse');
+    }
+
+    // Add cumulative risk for combined technical indicators
+    const technicalIndicators = [
+      features.hasIPAddress,
+      features.hasSuspiciousTLD,
+      features.hasExcessiveSubdomains,
+      features.hasSpecialChars,
+      features.hasNumericDomain
+    ].filter(Boolean).length;
+
+    if (technicalIndicators >= 2) {
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.COMBINED_THREATS * technicalIndicators;
+    }
   }
 
+  /**
+   * Adds risk factors based on brand impersonation detection
+   */
+  private addBrandImpersonationRiskFactors(result: UrlAnalysisResult, brandDetection: ReturnType<typeof BrandDetector.analyzeForBrandImpersonation>): void {
+    if (brandDetection.hasBrandImpersonation) {
+      result.flags.push('BRAND_IMPERSONATION');
+      result.brandMatches = true;
+      result.detectedBrand = brandDetection.detectedBrand;
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.BRAND_IMPERSONATION;
+
+      // Add extra risk for sophisticated impersonation attempts
+      if (brandDetection.impersonationType === 'typosquatting') {
+        result.risk += 0.1;
+      }
+    }
+
+    if (brandDetection.hasHomographAttack) {
+      result.flags.push('HOMOGRAPH_ATTACK');
+      result.confusables = brandDetection.confusableCharacters;
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.HOMOGRAPH_ATTACK;
+
+      // Add extra risk based on number of confusable characters
+      if (brandDetection.confusableCharacters.length > 1) {
+        result.risk += 0.1 * Math.min(brandDetection.confusableCharacters.length, 3);
+      }
+    }
+
+    if (brandDetection.hasCryptoScamIndicators) {
+      result.flags.push('CRYPTO_SCAM_INDICATORS');
+      result.cryptoTerms = brandDetection.cryptoTerms;
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.CRYPTO_SCAM;
+
+      // Add extra risk for multiple crypto terms
+      if (brandDetection.cryptoTerms.length > 1) {
+        result.risk += 0.1 * Math.min(brandDetection.cryptoTerms.length, 3);
+      }
+    }
+  }
+
+  /**
+   * Adds risk factors based on URL content patterns
+   */
+  private addContentPatternRiskFactors(result: UrlAnalysisResult, features: ReturnType<typeof URLFeatures.extractFeatures>): void {
+    if (features.hasSuspiciousFileExt) {
+      result.flags.push('SUSPICIOUS_FILE_EXTENSION');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.SUSPICIOUS_FILE;
+    }
+
+    if (features.hasDataURI) {
+      result.flags.push('DATA_URI_SCHEME');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.DATA_URI;
+    }
+
+    if (features.hasExcessiveEncoding) {
+      result.flags.push('EXCESSIVE_ENCODING');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.EXCESSIVE_ENCODING;
+    }
+
+    if (features.hasRedirectPattern) {
+      result.flags.push('REDIRECT_PRESENT');
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.REDIRECT;
+      result.suspiciousPatterns.push('redirect');
+
+      // Add extra risk if redirect is combined with other suspicious patterns
+      if (result.suspiciousPatterns.length > 1) {
+        result.risk += 0.15;
+      }
+    }
+
+    // Add cumulative risk for multiple content-based indicators
+    const contentIndicators = [
+      features.hasSuspiciousFileExt,
+      features.hasDataURI,
+      features.hasExcessiveEncoding,
+      features.hasRedirectPattern
+    ].filter(Boolean).length;
+
+    if (contentIndicators >= 2) {
+      result.risk += UrlAnalyzer.RISK_WEIGHTS.COMBINED_THREATS * contentIndicators;
+    }
+  }
+
+  /**
+   * Applies special rules for known legitimate domains
+   */
+  private applyLegitimateDomainsRules(result: UrlAnalysisResult): void {
+    // If it's a legitimate brand domain with no other flags, keep risk very low
+    if (result.brandDetection?.detectedBrand && result.flags.length === 1 && 
+        result.flags[0] === 'BRAND_IMPERSONATION') {
+      result.risk = 0.1;
+      result.flags = [];
+    }
+
+    // Only reduce risk for legitimate brand root domains
+    if (result.features?.domain && this.isLegitimateHosting(result.features.fullDomain)) {
+      result.risk = Math.max(0.1, result.risk - 0.2);
+    }
+  }
+
+  /**
+   * Checks if a domain belongs to a legitimate hosting provider
+   */
   private isLegitimateHosting(hostname: string): boolean {
+    // Only consider root domains as legitimate, not their subdomains on cloud platforms
     const legitDomains = [
       'github.com',
-      'wikipedia.org',
+      'gitlab.com',
+      'bitbucket.org',
       'wordpress.com',
-      'blogspot.com',
       'medium.com',
       'twitter.com',
       'facebook.com',
@@ -347,12 +282,44 @@ export class UrlAnalyzer {
       'google.com'
     ];
     
-    return legitDomains.some(domain => hostname.endsWith(domain));
+    // Cloud platforms that require additional scrutiny
+    const cloudPlatforms = [
+      'github.io',
+      'githubusercontent.com',
+      'blogspot.com',
+      'netlify.com',
+      'netlify.app',
+      'vercel.app',
+      'herokuapp.com',
+      'azurewebsites.net',
+      'web.app',
+      'firebaseapp.com',
+      'appspot.com',
+      'pages.dev',
+      'surge.sh',
+      'web.core.windows.net',
+      'blob.core.windows.net',
+      'godaddysites.com',
+      'wixsite.com',
+      'weebly.com',
+      'squarespace.com'
+    ];
+
+    // Check if domain is a cloud platform
+    const isCloudPlatform = cloudPlatforms.some(platform => hostname.endsWith(platform));
+    if (isCloudPlatform) {
+      return false; // Don't automatically trust cloud platforms
+    }
+    
+    return legitDomains.some(domain => hostname === domain || hostname.endsWith('.' + domain));
   }
 
+  /**
+   * Gets the risk level category for a risk score
+   */
   getRiskLevel(risk: number): 'Low' | 'Medium' | 'High' {
-    if (risk < 0.3) return 'Low';
-    if (risk < 0.6) return 'Medium';
+    if (risk < UrlAnalyzer.RISK_THRESHOLDS.LOW) return 'Low';
+    if (risk < UrlAnalyzer.RISK_THRESHOLDS.MEDIUM) return 'Medium';
     return 'High';
   }
 }
