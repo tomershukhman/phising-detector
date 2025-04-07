@@ -1,5 +1,5 @@
-import { FeatureResult } from './types';
-import { BrandDetector } from './BrandDetector';
+import { FeatureResult } from './types.js';
+import { BrandDetector } from './BrandDetector.js';
 
 export class URLFeatures {
   private static readonly commonTLDs = new Set([

@@ -1,9 +1,22 @@
-export interface FeatureResult {
+export interface BrandDetectionResult {
+  hasBrandImpersonation: boolean;
+  hasHomographAttack: boolean;
+  hasCryptoScamIndicators: boolean;
+  detectedBrand: string | null;
+  impersonationType: string | null;
+  confusableCharacters: Array<{original: string; lookalike: string}>;
+  cryptoTerms: string[];
+}
+
+export interface URLFeatures {
+  domain: string;
+  fullDomain: string;
+  tld: string;
+  subdomainCount: number;
   hasIPAddress: boolean;
   hasUncommonTLD: boolean;
   hasSuspiciousTLD: boolean;
   hasExcessiveSubdomains: boolean;
-  subdomainCount: number;
   hasSpecialChars: boolean;
   hasSuspiciousFileExt: boolean;
   usesSuspiciousHosting: boolean;
@@ -14,38 +27,17 @@ export interface FeatureResult {
   hasRedirectPattern: boolean;
   hasSuspiciousKeywords: boolean;
   hasBrandKeywords: boolean;
-  tld: string;
-  domain: string;
   subdomains: string[];
-  fullDomain: string;
   isInvalid?: boolean;
-}
-
-export interface BrandDetectionResult {
-  hasBrandImpersonation: boolean;
-  hasHomographAttack: boolean;
-  hasCryptoScamIndicators: boolean;
-  detectedBrand: string | null;
-  impersonationType: 'substring' | 'typosquatting' | 'gibberish' | null;
-  confusableCharacters: Array<{
-    original: string;
-    lookalike: string;
-  }>;
-  cryptoTerms: string[];
 }
 
 export interface UrlAnalysisResult {
   risk: number;
+  riskLevel: 'Low' | 'Medium' | 'High';
   flags: string[];
-  brandMatches: boolean;
   suspiciousPatterns: string[];
-  features?: FeatureResult;
+  features: URLFeatures;
   brandDetection?: BrandDetectionResult;
-  detectedBrand?: string;
-  typosquatting?: string;
-  confusables?: Array<{
-    original: string;
-    lookalike: string;
-  }>;
-  cryptoTerms?: string[];
 }
+
+export interface FeatureResult extends URLFeatures {}

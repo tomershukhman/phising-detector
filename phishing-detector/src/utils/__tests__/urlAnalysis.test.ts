@@ -46,8 +46,8 @@ describe('UrlAnalyzer', () => {
       suspiciousUrls.forEach(url => {
         const result = analyzer.analyzeUrl(url);
         expect(result.flags).toContain('BRAND_IMPERSONATION');
-        expect(result.brandMatches).toBe(true);
-        expect(result.typosquatting).toBeTruthy();
+        expect(result.brandDetection.hasBrandImpersonation).toBe(true);
+        expect(result.brandDetection.impersonationType).toBeTruthy();
         expect(analyzer.getRiskLevel(result.risk)).not.toBe('Low');
       });
     });
@@ -55,7 +55,7 @@ describe('UrlAnalyzer', () => {
     it('should detect brand names in subdomains', () => {
       const result = analyzer.analyzeUrl('https://login-paypal.malicious.com');
       expect(result.flags).toContain('BRAND_IMPERSONATION');
-      expect(result.brandMatches).toBe(true);
+      expect(result.brandDetection.hasBrandImpersonation).toBe(true);
       expect(result.risk).toBeGreaterThan(0.3);
     });
   });

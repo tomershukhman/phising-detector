@@ -1,5 +1,5 @@
-import { confusables } from './confusables';
-import { BrandDetectionResult } from './types';
+import { confusables } from './confusables.js';
+import { BrandDetectionResult } from './types.js';
 
 export class BrandDetector {
   private static readonly brandDomains = new Map([
@@ -33,7 +33,7 @@ export class BrandDetector {
   ]);
 
   private static readonly gibberishPatterns = {
-    minEntropyThreshold: 3.5,  // Higher values indicate more randomness
+    minEntropyThreshold: 4.0,  // Increased from 3.5 to reduce false positives
     maxConsecutiveConsonants: 4,
     maxConsecutiveNumbers: 3,
     maxRepeatedChars: 3,
@@ -65,7 +65,20 @@ export class BrandDetector {
 
   private static readonly commonTLDs = new Set([
     'com', 'org', 'net', 'edu', 'gov', 'io', 'me', 'app',
-    'dev', 'ai', 'co', 'us', 'uk', 'eu', 'de', 'fr', 'es', 'it'
+    'dev', 'ai', 'co', 'us', 'uk', 'eu', 'de', 'fr', 'es', 'it',
+    'ca', 'au', 'jp', 'cn', 'ru', 'br', 'in', 'nl', 'pl', 'ch',
+    'se', 'no', 'dk', 'fi', 'at', 'be', 'ie', 'nz', 'sg', 'kr',
+    'mx', 'ar', 'cl', 'za', 'hu', 'cz', 'pt', 'gr', 'il', 'ae',
+    'hk', 'my', 'th', 'ph', 'vn', 'ro', 'ua', 'sa', 'sk', 'info',
+    'biz', 'pro', 'int', 'jobs', 'name', 'tel', 'mobi', 'asia',
+    'cat', 'travel', 'xxx', 'club', 'blog', 'shop', 'site', 'online',
+    'tech', 'live', 'store', 'news', 'cloud', 'life', 'world', 'plus'
+  ]);
+
+  private static readonly legitHostingDomains = new Set([
+    'github.io', 'netlify.app', 'vercel.app', 'herokuapp.com',
+    'wordpress.com', 'blogspot.com', 'medium.com', 'wixsite.com',
+    'squarespace.com', 'shopify.com', 'myshopify.com'
   ]);
 
   private static readonly cryptoCurrencyTerms = new Set([
@@ -95,13 +108,24 @@ export class BrandDetector {
       cryptoTerms: []
     };
 
-    // Normalize domain for comparison
+    // Skip analysis for known legitimate hosting domains
+    if (this.legitHostingDomains.has(tld) || 
+        Array.from(this.legitHostingDomains).some(host => fullDomain.endsWith(host))) {
+      return result;
+    }
+
+    // Skip analysis for educational institutions
+    if (tld === 'edu' || fullDomain.includes('.edu.')) {
+      return result;
+    }
+
+    // Rest of the analysis with higher thresholds for detection
     const normalizedDomain = this.normalizeString(domain);
     const normalizedFullDomain = this.normalizeString(fullDomain);
 
-    // Check for gibberish patterns and random strings
+    // Check for gibberish patterns with stricter rules
     const entropy = this.calculateEntropy(domain);
-    const hasGibberish = entropy > this.gibberishPatterns.minEntropyThreshold ||
+    const hasGibberish = entropy > this.gibberishPatterns.minEntropyThreshold &&
       this.gibberishPatterns.suspiciousPatterns.some(pattern => pattern.test(domain));
 
     if (hasGibberish) {
@@ -109,37 +133,37 @@ export class BrandDetector {
       result.impersonationType = 'gibberish';
     }
 
-    // Check for brand impersonation
+    // Brand impersonation checks
     for (const [brand, legitimateDomain] of this.brandDomains) {
-      // Skip if it's the legitimate domain
-      if (fullDomain === legitimateDomain) continue;
+      // Skip if it's the legitimate domain or subdomain
+      if (fullDomain === legitimateDomain || fullDomain.endsWith('.' + legitimateDomain)) continue;
 
-      // Check brand variants if they exist
+      // Check for scam indicators first
+      const hasScamIndicators = Array.from(this.scamIndicators)
+        .filter(indicator => normalizedFullDomain.includes(indicator)).length >= 2; // Require multiple indicators
+
+      const isLegitTLD = this.commonTLDs.has(tld.toLowerCase());
+
+      // Check brand variants
       const variants = this.brandVariants.get(brand) || [brand];
       const hasVariantMatch = variants.some(variant => 
-        normalizedDomain.includes(variant) || normalizedFullDomain.includes(variant)
+        normalizedDomain === variant || // Exact match only
+        (normalizedDomain.includes(variant) && hasScamIndicators) // Must have scam indicators if just a substring
       );
 
-      // Check for brand name in domain and validate against legitimate domain
-      if (hasVariantMatch) {
-        // Additional checks for more accurate detection
-        const isLegitTLD = this.commonTLDs.has(tld.toLowerCase());
-        const hasScamIndicators = Array.from(this.scamIndicators)
-          .some(indicator => normalizedFullDomain.includes(indicator));
-
-        if (!isLegitTLD || hasScamIndicators) {
-          result.hasBrandImpersonation = true;
-          result.detectedBrand = brand;
-          result.impersonationType = 'substring';
-          break;
-        }
+      // More targeted detection
+      if (hasVariantMatch && !isLegitTLD && hasScamIndicators) {
+        result.hasBrandImpersonation = true;
+        result.detectedBrand = brand;
+        result.impersonationType = 'substring';
+        break;
       }
 
-      // Check for typosquatting using Levenshtein distance
+      // Stricter typosquatting detection
       const distance = this.levenshteinDistance(normalizedDomain, brand);
-      const maxAllowedDistance = brand.length <= 5 ? 1 : 2;
+      const maxAllowedDistance = Math.min(1, Math.floor(brand.length / 8)); // More conservative distance
 
-      if (distance > 0 && distance <= maxAllowedDistance) {
+      if (distance > 0 && distance <= maxAllowedDistance && !isLegitTLD) {
         result.hasBrandImpersonation = true;
         result.detectedBrand = brand;
         result.impersonationType = 'typosquatting';
