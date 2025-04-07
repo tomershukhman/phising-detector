@@ -8,6 +8,9 @@ import { parse } from 'csv-parse/sync';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Percentage of data to test (0.0 to 1.0)
+const DATA_TO_TEST = 0.5;
+
 describe('UrlAnalyzer', () => {
   let analyzer: UrlAnalyzer;
 
@@ -339,21 +342,33 @@ describe('Dataset Testing', () => {
   });
 
   it('should show detection results for each URL', () => {
+    const getDatasetSample = (data: string[], count: number) => {
+      return data.slice(0, count);
+    };
+
     const phishingUrls = fs.readFileSync(path.join(__dirname, '../../data/phishing.csv'), 'utf-8')
       .split('\n')
-      .filter(url => url.trim())
-      .slice(0, 100); // Test more URLs
+      .filter(url => url.trim());
     
     const legitUrls = fs.readFileSync(path.join(__dirname, '../../data/legitimate.csv'), 'utf-8')
       .split('\n')
-      .filter(url => url.trim())
-      .slice(0, 100);
+      .filter(url => url.trim());
+
+    // Calculate the minimum count to ensure balanced dataset
+    const minCount = Math.min(phishingUrls.length, legitUrls.length);
+    const sampleSize = Math.floor(minCount * DATA_TO_TEST);
+
+    // Get equal samples from both datasets
+    const phishingSample = getDatasetSample(phishingUrls, sampleSize);
+    const legitSample = getDatasetSample(legitUrls, sampleSize);
+
+    console.log(`Testing ${sampleSize} URLs from each dataset (${(DATA_TO_TEST * 100).toFixed(1)}% of ${minCount})`);
 
     const outputPath = path.join(__dirname, '../../../classification_results.html');
     
     // Initialize statistics
     const stats = {
-      totalTests: phishingUrls.length + legitUrls.length,
+      totalTests: phishingSample.length + legitSample.length,
       correctPhishing: 0,
       incorrectPhishing: 0,
       correctLegit: 0,
@@ -362,7 +377,7 @@ describe('Dataset Testing', () => {
     };
 
     // Generate results
-    const results = [...phishingUrls, ...legitUrls].map(url => {
+    const results = [...phishingSample, ...legitSample].map(url => {
       try {
         const trueLabel = phishingUrls.includes(url) ? 'phishing' : 'legit';
         const result = analyzer.analyzeUrl(url);
