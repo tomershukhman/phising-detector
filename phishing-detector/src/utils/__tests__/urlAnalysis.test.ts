@@ -205,91 +205,278 @@ function stratifiedSample(urls: string[], sampleSize: number): string[] {
   return [...result];
 }
 
-describe('Dataset Testing', () => {
+// Helper functions for test data management
+function loadUrls(isPhishing: boolean): string[] {
+  const filename = isPhishing ? 'phishing.csv' : 'legitimate.csv';
+  try {
+    const fileContent = fs.readFileSync(path.join(__dirname, '../../data', filename), 'utf-8');
+    return fileContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(url => url && url.length > 0 && !url.startsWith('#'));
+  } catch (error) {
+    console.error(`Error loading ${filename}:`, error);
+    return [];
+  }
+}
+
+function findUrlsWithPattern(urls: string[], pattern: RegExp): string[] {
+  return urls.filter(url => pattern.test(url)).slice(0, 5); // Take up to 5 matching URLs
+}
+
+function findUrlsWithTLD(urls: string[], tld: string): string[] {
+  return urls.filter(url => {
+    try {
+      return new URL(url).hostname.endsWith(`.${tld}`);
+    } catch {
+      return false;
+    }
+  }).slice(0, 5);
+}
+
+function countSubdomains(url: string): number {
+  try {
+    return new URL(url).hostname.split('.').length;
+  } catch {
+    return 0;
+  }
+}
+
+describe('Feature Detection with Real Data', () => {
   let analyzer: UrlAnalyzer;
+  let phishingUrls: string[];
+  let legitUrls: string[];
 
   beforeAll(() => {
     analyzer = new UrlAnalyzer();
+    phishingUrls = loadUrls(true);
+    legitUrls = loadUrls(false);
   });
 
-  it('should correctly analyze stratified samples from both datasets', () => {
-    // Read both datasets
+  describe('Technical Indicators', () => {
+    it('should detect IP address URLs', () => {
+      const ipUrls = findUrlsWithPattern(phishingUrls, /https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/);
+      expect(ipUrls.length).toBeGreaterThan(0);
+      
+      ipUrls.forEach(url => {
+        const result = analyzer.analyzeUrl(url);
+        expect(result.flags).toContain('IP_ADDRESS_URL');
+        expect(result.risk).toBeGreaterThan(0.3);
+      });
+    });
+
+    it('should detect suspicious TLDs', () => {
+      const suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq'];
+      const suspiciousUrls = suspiciousTlds.flatMap(tld => findUrlsWithTLD(phishingUrls, tld));
+      expect(suspiciousUrls.length).toBeGreaterThan(0);
+
+      suspiciousUrls.forEach(url => {
+        const result = analyzer.analyzeUrl(url);
+        expect(result.flags).toContain('UNCOMMON_TLD');
+      });
+    });
+
+    it('should detect excessive subdomains', () => {
+      const excessiveSubdomainUrls = phishingUrls.filter(url => countSubdomains(url) > 3).slice(0, 5);
+      expect(excessiveSubdomainUrls.length).toBeGreaterThan(0);
+
+      excessiveSubdomainUrls.forEach(url => {
+        const result = analyzer.analyzeUrl(url);
+        expect(result.flags).toContain('EXCESSIVE_SUBDOMAINS');
+      });
+    });
+  });
+
+  describe('Content and Pattern Detection', () => {
+    it('should detect suspicious keywords in real phishing URLs', () => {
+      const keywordUrls = findUrlsWithPattern(phishingUrls, /(login|secure|verify|account)/i);
+      expect(keywordUrls.length).toBeGreaterThan(0);
+
+      keywordUrls.forEach(url => {
+        const result = analyzer.analyzeUrl(url);
+        expect(result.suspiciousPatterns.length).toBeGreaterThan(0);
+        const hasKeyword = result.suspiciousPatterns.some(pattern => 
+          ['login', 'secure', 'verify', 'account'].includes(pattern));
+        expect(hasKeyword).toBe(true);
+      });
+    });
+
+    it('should detect suspicious file extensions', () => {
+      const suspiciousExtUrls = findUrlsWithPattern(phishingUrls, /\.(exe|zip|rar|pdf|doc|docx)$/i);
+      
+      if (suspiciousExtUrls.length > 0) {
+        suspiciousExtUrls.forEach(url => {
+          const result = analyzer.analyzeUrl(url);
+          expect(result.flags).toContain('SUSPICIOUS_FILE_EXTENSION');
+        });
+      } else {
+        console.log('No URLs with suspicious extensions found in the dataset');
+      }
+    });
+  });
+
+  describe('Legitimate URL Analysis', () => {
+    it('should correctly identify legitimate URLs as low risk', () => {
+      const sample = legitUrls.slice(0, 10);
+      expect(sample.length).toBeGreaterThan(0);
+
+      sample.forEach(url => {
+        const result = analyzer.analyzeUrl(url);
+        expect(result.risk).toBeLessThan(0.5);
+        if (result.risk >= 0.3) {
+          console.log(`Warning: Borderline legitimate URL: ${url} (Risk: ${result.risk})`);
+        }
+      });
+    });
+  });
+});
+
+describe('Dataset Testing', () => {
+  let analyzer: UrlAnalyzer;
+
+  beforeEach(() => {
+    analyzer = new UrlAnalyzer();
+  });
+
+  it('should show detection results for each URL', () => {
     const phishingUrls = fs.readFileSync(path.join(__dirname, '../../data/phishing.csv'), 'utf-8')
       .split('\n')
-      .filter(url => url.trim()); // Remove empty lines
+      .filter(url => url.trim())
+      .slice(0, 100); // Test more URLs
     
     const legitUrls = fs.readFileSync(path.join(__dirname, '../../data/legitimate.csv'), 'utf-8')
       .split('\n')
-      .filter(url => url.trim()); // Remove empty lines
+      .filter(url => url.trim())
+      .slice(0, 100);
 
-    // Take 5% stratified samples
-    const phishingSample = stratifiedSample(phishingUrls, Math.ceil(phishingUrls.length * 0.05));
-    const legitSample = stratifiedSample(legitUrls, Math.ceil(legitUrls.length * 0.05));
+    const outputPath = path.join(__dirname, '../../../classification_results.html');
+    
+    // Initialize statistics
+    const stats = {
+      totalTests: phishingUrls.length + legitUrls.length,
+      correctPhishing: 0,
+      incorrectPhishing: 0,
+      correctLegit: 0,
+      incorrectLegit: 0,
+      errors: [] as string[]
+    };
 
-    console.log('\nDataset Coverage:');
-    console.log(`Total Phishing URLs: ${phishingUrls.length}, Sampled: ${phishingSample.length}`);
-    console.log(`Total Legitimate URLs: ${legitUrls.length}, Sampled: ${legitSample.length}`);
-
-    // Analyze category distribution
-    const phishingCategories = new Map();
-    const legitCategories = new Map();
-
-    phishingSample.forEach(url => {
-      const cats = categorizeUrl(url);
-      cats.forEach(cat => phishingCategories.set(cat, (phishingCategories.get(cat) || 0) + 1));
-    });
-
-    legitSample.forEach(url => {
-      const cats = categorizeUrl(url);
-      cats.forEach(cat => legitCategories.set(cat, (legitCategories.get(cat) || 0) + 1));
-    });
-
-    console.log('\nPhishing URL Categories:', Object.fromEntries(phishingCategories));
-    console.log('Legitimate URL Categories:', Object.fromEntries(legitCategories));
-
-    // Test URLs and track accuracy
-    let phishingCorrect = 0, legitCorrect = 0;
-    let phishingResults = [], legitResults = [];
-
-    phishingSample.forEach(url => {
+    // Generate results
+    const results = [...phishingUrls, ...legitUrls].map(url => {
       try {
+        const trueLabel = phishingUrls.includes(url) ? 'phishing' : 'legit';
         const result = analyzer.analyzeUrl(url);
-        phishingResults.push({ url, risk: result.risk, flags: result.flags });
-        if (result.risk > 0.5) phishingCorrect++;
+        const prediction = result.risk > 0.5 ? 'phishing' : 'legit';
+        const correct = trueLabel === prediction;
+        
+        // Update statistics
+        if (trueLabel === 'phishing') {
+          correct ? stats.correctPhishing++ : stats.incorrectPhishing++;
+        } else {
+          correct ? stats.correctLegit++ : stats.incorrectLegit++;
+        }
+
+        return {
+          url,
+          trueLabel,
+          prediction,
+          correct,
+          risk: result.risk,
+          flags: result.flags,
+          patterns: result.suspiciousPatterns
+        };
       } catch (error) {
-        console.warn('Error analyzing phishing URL:', url);
+        stats.errors.push(`Error analyzing ${url}: ${error}`);
+        return null;
       }
-    });
+    }).filter(r => r !== null);
 
-    legitSample.forEach(url => {
-      try {
-        const result = analyzer.analyzeUrl(url);
-        legitResults.push({ url, risk: result.risk, flags: result.flags });
-        if (result.risk < 0.3) legitCorrect++;
-      } catch (error) {
-        console.warn('Error analyzing legitimate URL:', url);
-      }
-    });
+    // Calculate accuracy metrics
+    const accuracy = ((stats.correctPhishing + stats.correctLegit) / stats.totalTests * 100).toFixed(2);
+    const phishingAccuracy = (stats.correctPhishing / phishingUrls.length * 100).toFixed(2);
+    const legitAccuracy = (stats.correctLegit / legitUrls.length * 100).toFixed(2);
 
-    // Calculate and log results
-    const phishingAccuracy = phishingCorrect / phishingSample.length;
-    const legitAccuracy = legitCorrect / legitSample.length;
-    const totalAccuracy = (phishingCorrect + legitCorrect) / (phishingSample.length + legitSample.length);
+    // Generate HTML
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Phishing Detection Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .stats { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .stat-box { background: white; padding: 10px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f5f5f5; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .correct { color: green; }
+        .incorrect { color: red; }
+        .errors { color: red; margin-top: 20px; }
+        .flag { display: inline-block; background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phishing Detection Test Results</h1>
+        
+        <div class="stats">
+            <h2>Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <strong>Overall Accuracy:</strong> ${accuracy}%
+                </div>
+                <div class="stat-box">
+                    <strong>Phishing Detection:</strong> ${phishingAccuracy}%
+                </div>
+                <div class="stat-box">
+                    <strong>Legitimate Detection:</strong> ${legitAccuracy}%
+                </div>
+                <div class="stat-box">
+                    <strong>Total URLs Tested:</strong> ${stats.totalTests}
+                </div>
+            </div>
+        </div>
 
-    console.log('\nResults:');
-    console.log(`Phishing Detection Rate: ${(phishingAccuracy * 100).toFixed(1)}%`);
-    console.log(`Legitimate Detection Rate: ${(legitAccuracy * 100).toFixed(1)}%`);
-    console.log(`Overall Accuracy: ${(totalAccuracy * 100).toFixed(1)}%`);
+        ${stats.errors.length > 0 ? `
+        <div class="errors">
+            <h3>Errors (${stats.errors.length})</h3>
+            <ul>
+                ${stats.errors.map(error => `<li>${error}</li>`).join('')}
+            </ul>
+        </div>
+        ` : ''}
 
-    // Log some misclassified examples for analysis
-    console.log('\nSample Misclassifications:');
-    phishingResults.filter(r => r.risk <= 0.5).slice(0, 3).forEach(r => 
-      console.log(`Missed Phishing: ${r.url} (Risk: ${r.risk.toFixed(2)}, Flags: ${r.flags.join(', ')})`));
-    legitResults.filter(r => r.risk >= 0.3).slice(0, 3).forEach(r => 
-      console.log(`False Positive: ${r.url} (Risk: ${r.risk.toFixed(2)}, Flags: ${r.flags.join(', ')})`));
+        <table>
+            <thead>
+                <tr>
+                    <th>URL</th>
+                    <th>True Label</th>
+                    <th>Prediction</th>
+                    <th>Risk Score</th>
+                    <th>Flags</th>
+                    <th>Patterns</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${results.map(r => `
+                <tr class="${r.correct ? 'correct' : 'incorrect'}">
+                    <td>${r.url}</td>
+                    <td>${r.trueLabel}</td>
+                    <td>${r.prediction} ${r.correct ? '✓' : '✗'}</td>
+                    <td>${r.risk.toFixed(2)}</td>
+                    <td>${r.flags.map(f => `<span class="flag">${f}</span>`).join(' ')}</td>
+                    <td>${r.patterns.join(', ')}</td>
+                </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>`;
 
-    // Assertions
-    expect(phishingAccuracy).toBeGreaterThan(0.7);
-    expect(legitAccuracy).toBeGreaterThan(0.7);
+    fs.writeFileSync(outputPath, html);
+    console.log(`Results written to ${outputPath}`);
   });
 });

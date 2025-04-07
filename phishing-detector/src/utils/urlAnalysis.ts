@@ -20,6 +20,17 @@ export class UrlAnalyzer {
   private tldList = ['.com', '.org', '.net', '.edu', '.gov'];
   private commonTLDs = new Set(['.com', '.org', '.net', '.edu', '.gov', '.io', '.co', '.biz', '.info']);
   private suspiciousFileExtensions = new Set(['.exe', '.zip', '.scr', '.js', '.msi', '.bat', '.dll']);
+  private commonHostingProviders = new Set([
+    'godaddysites.com',
+    'wcomhost.com',
+    'weebly.com',
+    'netlify.com',
+    'azurewebsites.net',
+    'herokuapp.com',
+    'cloudaccess.host',
+    '16mb.com',
+    'ngrok.io'
+  ]);
 
   analyzeUrl(url: string): UrlAnalysisResult {
     const result: UrlAnalysisResult = {
@@ -30,7 +41,9 @@ export class UrlAnalyzer {
     };
 
     try {
-      const urlObj = new URL(url);
+      // Add protocol if missing to prevent URL parse errors
+      const urlToAnalyze = url.startsWith('http') ? url : `http://${url}`;
+      const urlObj = new URL(urlToAnalyze);
       
       // Check for special characters in URL
       if (/@/.test(url) || /[<>{}|\\\^\[\]]/.test(url)) {
@@ -44,11 +57,32 @@ export class UrlAnalyzer {
         result.risk += 0.3;
       }
 
+      // Check for numeric prefix in domain (very common in phishing)
+      const mainDomainPart = urlObj.hostname.split('.')[0];
+      if (/^\d+/.test(mainDomainPart)) {
+        result.flags.push('NUMERIC_PREFIX');
+        result.risk += 0.3;
+      }
+
+      // Check for common hosting providers often used in phishing
+      for (const provider of this.commonHostingProviders) {
+        if (urlObj.hostname.endsWith(provider)) {
+          result.flags.push('SUSPICIOUS_HOSTING');
+          result.risk += 0.3;
+          break;
+        }
+      }
+
       // Enhanced TLD check
       const tld = this.extractTLD(urlObj.hostname);
       if (!this.commonTLDs.has(tld)) {
         result.flags.push('UNCOMMON_TLD');
-        result.risk += 0.2;
+        // Higher risk for known suspicious TLDs
+        if (['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz'].includes(tld)) {
+          result.risk += 0.4;
+        } else {
+          result.risk += 0.2;
+        }
       }
 
       // Check for suspicious file extensions
@@ -65,31 +99,36 @@ export class UrlAnalyzer {
         (domainParts[0] === 'www' && domainParts.length > 2 ? domainParts[1] : domainParts[domainParts.length - 2]) :
         domainParts[0];
 
-      // Check main domain for brand impersonation
-      const brandCheck = this.checkBrandImpersonation(mainDomain);
-      if (brandCheck.impersonated) {
-        result.flags.push('BRAND_IMPERSONATION');
-        result.brandMatches = true;
-        result.typosquatting = brandCheck.originalBrand;
-        result.risk += 0.4;
-      }
-
-      // Check for brand names in subdomains (e.g., login-paypal.malicious.com)
-      if (!brandCheck.impersonated) {
-        // Check if any subdomain part contains a brand name
-        const fullDomainString = urlObj.hostname.toLowerCase();
-        for (const brand of this.commonBrands) {
-          // Skip if the domain is exactly the brand (legitimate)
-          if (mainDomain === brand) continue;
-          
-          // Check if any part contains the brand name
-          if (fullDomainString.includes(brand) && mainDomain !== brand) {
-            result.flags.push('BRAND_IMPERSONATION');
-            result.brandMatches = true;
-            result.typosquatting = brand;
-            result.risk += 0.4;
-            break;
-          }
+      // Normalize domain for better brand detection
+      const normalizedDomain = this.normalizeString(mainDomain);
+      
+      // Check for brand impersonation in any part of the hostname
+      const fullHostName = urlObj.hostname.toLowerCase();
+      const normalizedHostname = this.normalizeString(fullHostName);
+      
+      for (const brand of this.commonBrands) {
+        // Skip if it's the legitimate brand domain
+        if (mainDomain === brand) continue;
+        
+        // Check for brand name anywhere in the hostname
+        if (normalizedHostname.includes(brand)) {
+          result.flags.push('BRAND_IMPERSONATION');
+          result.brandMatches = true;
+          result.typosquatting = brand;
+          result.risk += 0.4;
+          break;
+        }
+        
+        // Check for typosquatting
+        const distance = this.levenshteinDistance(normalizedDomain, brand);
+        const maxAllowedDistance = brand.length <= 5 ? 1 : 2;
+        
+        if (distance > 0 && distance <= maxAllowedDistance) {
+          result.flags.push('TYPOSQUATTING');
+          result.brandMatches = true;
+          result.typosquatting = brand;
+          result.risk += 0.4;
+          break;
         }
       }
 
@@ -115,7 +154,7 @@ export class UrlAnalyzer {
       const subdomainCount = urlObj.hostname.split('.').length - 2;
       if (subdomainCount > 2) {
         result.flags.push('EXCESSIVE_SUBDOMAINS');
-        result.risk += 0.15;
+        result.risk += 0.15 * (subdomainCount - 2); // Increasing risk with more subdomains
       }
 
       // Check for numeric domain
@@ -140,6 +179,11 @@ export class UrlAnalyzer {
       if (url.includes('redirect') || url.includes('url=') || url.includes('goto=')) {
         result.flags.push('REDIRECT_PRESENT');
         result.risk += 0.15;
+      }
+
+      // Reduce risk for well-known legitimate domains
+      if (this.isLegitimateHosting(urlObj.hostname)) {
+        result.risk = Math.max(0.1, result.risk - 0.3);
       }
 
       // Cap the risk score at 1
@@ -284,6 +328,26 @@ export class UrlAnalyzer {
       });
     }
     return false;
+  }
+
+  private isLegitimateHosting(hostname: string): boolean {
+    const legitDomains = [
+      'github.com',
+      'wikipedia.org',
+      'wordpress.com',
+      'blogspot.com',
+      'medium.com',
+      'twitter.com',
+      'facebook.com',
+      'linkedin.com',
+      'youtube.com',
+      'amazon.com',
+      'microsoft.com',
+      'apple.com',
+      'google.com'
+    ];
+    
+    return legitDomains.some(domain => hostname.endsWith(domain));
   }
 
   getRiskLevel(risk: number): 'Low' | 'Medium' | 'High' {
