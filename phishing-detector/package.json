@@ -4,13 +4,16 @@
   "version": "0.0.1",
   "description": "A basic Plasmo extension.",
   "author": "Plasmo Corp. <foss@plasmo.com>",
+  "type": "module",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
-    "test": "jest"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "split-dataset": "tsx src/scripts/splitDataset.ts"
   },
   "dependencies": {
+    "csv-parse": "^5.6.0",
     "plasmo": "0.90.3",
     "react": "18.2.0",
     "react-dom": "18.2.0"
@@ -25,7 +28,9 @@
     "jest": "^29.7.0",
     "prettier": "3.2.4",
     "ts-jest": "^29.3.1",
-    "typescript": "5.3.3"
+    "typescript": "5.3.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.0"
   },
   "manifest": {
     "host_permissions": [
