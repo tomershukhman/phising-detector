@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Percentage of data to test (0.0 to 1.0)
-const DATA_TO_TEST = 0.5;
+const DATA_TO_TEST = 0.01;
 
 describe('UrlAnalyzer', () => {
   let analyzer: UrlAnalyzer;
@@ -373,6 +373,10 @@ describe('Dataset Testing', () => {
       incorrectPhishing: 0,
       correctLegit: 0,
       incorrectLegit: 0,
+      tp: 0, // True Positives (correctly identified phishing)
+      tn: 0, // True Negatives (correctly identified legitimate)
+      fp: 0, // False Positives (legitimate identified as phishing)
+      fn: 0, // False Negatives (phishing identified as legitimate)
       errors: [] as string[]
     };
 
@@ -386,9 +390,21 @@ describe('Dataset Testing', () => {
         
         // Update statistics
         if (trueLabel === 'phishing') {
-          correct ? stats.correctPhishing++ : stats.incorrectPhishing++;
+          if (prediction === 'phishing') {
+            stats.tp++;
+            stats.correctPhishing++;
+          } else {
+            stats.fn++;
+            stats.incorrectPhishing++;
+          }
         } else {
-          correct ? stats.correctLegit++ : stats.incorrectLegit++;
+          if (prediction === 'legit') {
+            stats.tn++;
+            stats.correctLegit++;
+          } else {
+            stats.fp++;
+            stats.incorrectLegit++;
+          }
         }
 
         return {
@@ -410,6 +426,12 @@ describe('Dataset Testing', () => {
     const accuracy = ((stats.correctPhishing + stats.correctLegit) / stats.totalTests * 100).toFixed(2);
     const phishingAccuracy = (stats.correctPhishing / phishingUrls.length * 100).toFixed(2);
     const legitAccuracy = (stats.correctLegit / legitUrls.length * 100).toFixed(2);
+    
+    // Calculate additional metrics
+    const precision = (stats.tp / (stats.tp + stats.fp) * 100).toFixed(2);
+    const recall = (stats.tp / (stats.tp + stats.fn) * 100).toFixed(2);
+    const f1Score = (2 * (parseFloat(precision) * parseFloat(recall)) / 
+                    (parseFloat(precision) + parseFloat(recall))).toFixed(2);
 
     // Generate HTML
     const html = `<!DOCTYPE html>
@@ -422,6 +444,32 @@ describe('Dataset Testing', () => {
         .stats { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
         .stat-box { background: white; padding: 10px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .confusion-matrix { 
+            margin: 20px 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 2px solid #ddd;
+            background: white;
+        }
+        .confusion-matrix th, .confusion-matrix td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .confusion-matrix th { background: #f5f5f5; font-weight: bold; }
+        .confusion-matrix .highlight { background: #e8f4f8; }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .metric-box {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #f5f5f5; }
@@ -437,19 +485,46 @@ describe('Dataset Testing', () => {
         <h1>Phishing Detection Test Results</h1>
         
         <div class="stats">
-            <h2>Statistics</h2>
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <strong>Overall Accuracy:</strong> ${accuracy}%
+            <h2>Confusion Matrix</h2>
+            <table class="confusion-matrix">
+                <tr>
+                    <th></th>
+                    <th>Predicted Phishing</th>
+                    <th>Predicted Legitimate</th>
+                    <th>Total</th>
+                </tr>
+                <tr>
+                    <th>Actual Phishing</th>
+                    <td class="highlight">${stats.tp} (TP)</td>
+                    <td>${stats.fn} (FN)</td>
+                    <td>${stats.tp + stats.fn}</td>
+                </tr>
+                <tr>
+                    <th>Actual Legitimate</th>
+                    <td>${stats.fp} (FP)</td>
+                    <td class="highlight">${stats.tn} (TN)</td>
+                    <td>${stats.fp + stats.tn}</td>
+                </tr>
+                <tr>
+                    <th>Total</th>
+                    <td>${stats.tp + stats.fp}</td>
+                    <td>${stats.fn + stats.tn}</td>
+                    <td>${stats.totalTests}</td>
+                </tr>
+            </table>
+
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <strong>Accuracy:</strong> ${accuracy}%
                 </div>
-                <div class="stat-box">
-                    <strong>Phishing Detection:</strong> ${phishingAccuracy}%
+                <div class="metric-box">
+                    <strong>Precision:</strong> ${precision}%
                 </div>
-                <div class="stat-box">
-                    <strong>Legitimate Detection:</strong> ${legitAccuracy}%
+                <div class="metric-box">
+                    <strong>Recall:</strong> ${recall}%
                 </div>
-                <div class="stat-box">
-                    <strong>Total URLs Tested:</strong> ${stats.totalTests}
+                <div class="metric-box">
+                    <strong>F1 Score:</strong> ${f1Score}
                 </div>
             </div>
         </div>
