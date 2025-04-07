@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phishing Detection Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .stats { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .stat-box { background: white; padding: 10px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f5f5f5; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .correct { color: green; }
+        .incorrect { color: red; }
+        .errors { color: red; margin-top: 20px; }
+        .flag { display: inline-block; background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phishing Detection Test Results</h1>
+        
+        <div class="stats">
+            <h2>Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <strong>Overall Accuracy:</strong> 83.00%
+                </div>
+                <div class="stat-box">
+                    <strong>Phishing Detection:</strong> 66.00%
+                </div>
+                <div class="stat-box">
+                    <strong>Legitimate Detection:</strong> 100.00%
+                </div>
+                <div class="stat-box">
+                    <strong>Total URLs Tested:</strong> 200
+                </div>
+            </div>
+        </div>
+
+        
+
+        <table>
+            <thead>
+                <tr>
+                    <th>URL</th>
+                    <th>True Label</th>
+                    <th>Prediction</th>
+                    <th>Risk Score</th>
+                    <th>Flags</th>
+                    <th>Patterns</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr class="correct">
+                    <td>0000111servicehelpdesk.godaddysites.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000011accesswebform.godaddysites.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>00003.online</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0009servicedeskowa.godaddysites.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000n38p.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000n38t.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000n8pc.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000ne9r.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000njep.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000nku9.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000nt6r.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000nx2b.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o1g0.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o2ba.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o2sl.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o4d4.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o4n8.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o5eh.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>000o8dc.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>001002.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.90</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0010defaulttypeds0678pailem.weebly.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>00110omeopranslateslentldetext.godaddysites.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>00432453212346.z13.web.core.windows.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">EXCESSIVE_SUBDOMAINS</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>00e9e64bacce231bc2e4635333a7a68bbab82bbabbb7941b9b-apidata.googleusercontent.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">BRAND_IMPERSONATION</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>00wellsfarg.azurewebsites.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0101-mx001.emailnetwork.uk</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0132.slfrc209.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>018161955758690-dot-cjr-ksh-egy.appspot.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0307shppsp01.fun</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0331.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0365officeonline.blob.core.windows.net</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.45</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">EXCESSIVE_SUBDOMAINS</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0365officeproduct.blob.core.windows.net</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.45</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">EXCESSIVE_SUBDOMAINS</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>039282fsd.z19.web.core.windows.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">EXCESSIVE_SUBDOMAINS</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>041089719357198-dot-cjr-ksh-egy.appspot.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>042019.tk</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.90</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>04393bf.netsolhost.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>043b689.netsolhost.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>043b791.netsolhost.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>043bccd.netsolhost.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>044088d.wcomhost.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>04df7d95-f8fb-4d90-97df-7d56dd7640ce-9d951d.netlify.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0503.site</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>061093220165.ctinets.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>067f3f4d4e085681f28dee075d3bf310.gq</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>073zlaokta.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>08-2019-central.cloudaccess.host</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>08782949.624dgns34gh.pw</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0879.bounceme.net</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>088invoice.online</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>08ea080b.ngrok.io</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>08fb4a32b302c45e.insonpolooapp.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>090676b3fedd4b4dbd28a578c432da8e.testurl.ws</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>09102019helpdesk20ticket-secondary.z19.web.core.windows.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">EXCESSIVE_SUBDOMAINS</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>091100-start-att.weebly.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>09-2019-novobanc-o.cloudaccess.host</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0946658.godaddysites.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0947.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0b50yutyudmynkmsh0mp0t7d6i4rv4pxw52a4ii9x8wajv4m4j.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0bmen-money.online</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0bmen.online</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0c2onosts-svcs.myddns.me</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0c584d61-0ba8-48fe-8709-44323bfc47c1.htmlcomponentservice.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0d03525a.ngrok.io</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0et.cn40p.pro</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0ffice-resolving-l0gin-365.trilhadojerico.com.br</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0ffice-securltlesy-micr0s0ft-acc0unt.online</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.90</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">BRAND_IMPERSONATION</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0fflce-ac0unt-secure-auuth-mlcr0s0ft.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td>secure</td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0fj3.icu</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0iosr4na5grhmyf.mediderm.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0mmbre5dfb31.netlify.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0s.or3ws5dumvzc4y3pnu.drgo.ru</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0s.or3ws5dumvzc4y3pnu.mbway.ru</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>0utiook.live</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0utl00k-365-0ff1ce0nline.ml</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0w6dcfry8540pw57cy436t1by8qqd2cen2mmf31fv9betkpxb0.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>0x8e89ad3526d65f8a.xyz</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>10000587845458.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>10000eth.net</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>1000265854000295.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>10008412545141.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>100389.azurewebsites.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>10059.azurewebsites.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>100amzm.azurewebsites.net</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>100btc.online</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>100dh.tk</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.70</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>100monet.online</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>100x-mlt-btc.com</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.30</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>1010928192.hopto.org</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>10124-settings.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.60</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>101-781-130-314.co.nf</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="incorrect">
+                    <td>1024201522.rsc.cdn77.org</td>
+                    <td>phishing</td>
+                    <td>legit ✗</td>
+                    <td>0.50</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>1024565520000.16mb.com</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>0.80</td>
+                    <td><span class="flag">NUMERIC_PREFIX</span> <span class="flag">SUSPICIOUS_HOSTING</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.114.104.87</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.119.0.224</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.119.30.176</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.195.100.74</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.195.7.246</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.195.7.57</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.210.236.134</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>103.21.182.11</td>
+                    <td>phishing</td>
+                    <td>phishing ✓</td>
+                    <td>1.00</td>
+                    <td><span class="flag">IP_ADDRESS_URL</span> <span class="flag">NUMERIC_PREFIX</span> <span class="flag">UNCOMMON_TLD</span> <span class="flag">NUMERIC_DOMAIN</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.crestonwood.com/router.php</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://rgipt.ac.in</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.iracing.com/tracks/gateway-motorsports-park/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.mutuo.it</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://vamoaestudiarmedicina.blogspot.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://parade.com/425836/joshwigler/the-amazing-race-host-phil-keoghan-previews-the-season-27-premiere/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.astrologyonline.eu/Astro_MemoNew/Profilo.asp</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.lifewire.com/tcp-port-21-818146</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://technofizi.net/top-best-mp3-downloader-app-for-android-free-music-download/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.missfiga.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.chiefarchitect.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.2345daohang.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.game.co.uk/en/games/nintendo-switch/nintendo-switch/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://blog.hubspot.com/marketing/email-open-click-rate-benchmark</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://sophie-world.com/games/port-and-starboard</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.provenancevineyards.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.online-tech-tips.com/computer-tips/how-to-change-mac-address/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.enkiquotes.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://answers.yahoo.com/question/index?qid=20060914152716AAZTOSo</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.chiostrodelbramante.it/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://yummy-cummy-in-my-tummy.tumblr.com</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.j-net.cn/cms</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://press-preview.weebly.com</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.30</td>
+                    <td><span class="flag">SUSPICIOUS_HOSTING</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://taccs.hu</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://wiki.openstreetmap.org/wiki/Databases_and_data_access_APIs</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.merriam-webster.com/dictionary/tabloid</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.bls.gov/oes/current/oes292035.htm</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://ru.wikipedia.org/wiki/MultiMedia_Card</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://searchnetworking.techtarget.com/tip/Comparisons-of-coaxial-cable-fiber-optic-cable-and-twisted-pair-cable</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.provenancevineyards.com/our-wines</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://support.brother.com/g/s/id/pdf_pub/faq/faq002478/en/Scan_To_FTP.pdf</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.excel-easy.com/examples/shortest-path-problem.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://stattrek.com/statistics/dictionary.aspx?definition=standard%20error</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.flaticon.com/free-icons/parking_403</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.bobsplans.com/FreeDownloads/RouterTable.pdf</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://en.wikipedia.org/wiki/NIC_Bank</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.history.com/topics/american-civil-war/gettysburg-address</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://remontka.pro/mac-address/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://en.wikipedia.org/wiki/Gateway</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://twitter.com/mimosagrillclt</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.calculate.co.il/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.whio.com/news/local/thief-breaks-into-save-lot-steals-steaks-dayton/dX1YgaOZ7zmj18bPd4tU6L/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.markspcsolution.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.mummyandmini.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.showplaceicon.com/Browsing/Cinemas/Details/8863</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://securityxploded.com/router-password-kracker.php</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td>password</td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.ilovefreesoftware.com/16/featured/5-best-free-network-packet-sniffer.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://apshop.vn/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.facebook.com/thekeyboardcat</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.soul-flower.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.tech-faq.com/mms.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://sniz.porn</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.inquirelive.co.uk/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.wordnik.com/words/blackletter</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.gadgetzone.com.my/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://ru.dictionarist.com/iconoclast</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://smallbusiness.chron.com/enabling-google-chrome-menu-bar-78783.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://coderwall.com/p/kvzbpa/don-t-use-array-foreach-use-for-instead</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.wealthdaily.com/articles/nokia-stock/2147</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.emploi-petrole.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://dic.academic.ru/dic.nsf/ruwiki/1425594</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.biology4kids.com/files/cell2_activetran.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.namecheap.com/domains/registration.aspx</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.zeitschriften-abo.de/DE/NVG/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://security.radware.com/ddos-knowledge-center/DDoSPedia/command-and-control-server/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.iconfinder.com/icons/858729/computer_mouse_icon_computer_mouse_line_icon_mouse_mouse_icon_mouse_line_icon_icon</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.audioenglish.org/dictionary/resolution.htm</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.speedcamupdates.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td>update</td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.parkwhiz.com/p/new-york-parking/map/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.routeralley.com/guides/nat.pdf</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://barbo.sk</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.vpi.us/cat5-5e-6-standards.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://fitnessista.com/the-perfect-protein-pancake/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://animaldiversity.org/accounts/Mus_musculus/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td>account</td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.walmart.com/c/ep/cat6-ethernet-cables</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://science.howstuffworks.com/warp-speed2.htm</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.sportshub.com.sg/Directions/Documents/Sports-Hub-Traffic-Brochure.pdf</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.srnonline.com/show-clocks</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.metal-supply.dk/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.net.com.br/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.slideshare.net/ashamsvk/project-report-on-digital-media-marketing</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.metalinjection.net/reviews/album-review-lord-mantis-death-mask</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.youtube.com/user/PING</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://learn.sparkfun.com/tutorials/16</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.workiva.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.jobchannel.ch/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://fas.org/sgp/crs/misc/R42078.pdf</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.matrixlab-examples.com/line-segment.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.slant.co/topics/2404/~file-managers-for-windows</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.computerhope.com/jargon/p/paraport.htm</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.apkhere.com/app/com.smartprojects.ramoptimization</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://bangla.plus</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://norecipes.com/japanese-curry-scratch</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://en.wikipedia.org/wiki/Incorporation_of_the_Bill_of_Rights</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.abbreviations.com/term/16642</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://www.cnc-club.ru/forum/index.php</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://www.colgate.com/en-us/products/enamel-health</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>https://estacaoxxx.wordpress.com/</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.10</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://careers.stateuniversity.com/pages/100000947/Search-Engines-Future-User-Preferences-Artificial-Intelligence.html</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="correct">
+                    <td>http://energo-investment.hu</td>
+                    <td>legit</td>
+                    <td>legit ✓</td>
+                    <td>0.20</td>
+                    <td><span class="flag">UNCOMMON_TLD</span></td>
+                    <td></td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

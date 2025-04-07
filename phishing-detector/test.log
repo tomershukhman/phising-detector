@@ -1,0 +1,105 @@
+
+> phishing-detector@0.0.1 test /Users/tomer.shukhman/dev/phising-detector/phishing-detector
+> node --experimental-vm-modules node_modules/jest/bin/jest.js src/utils/__tests__/urlAnalysis.test.ts
+
+(node:73631) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL src/utils/__tests__/urlAnalysis.test.ts (7.042 s)
+  UrlAnalyzer
+    Safe URLs
+      ✓ should identify legitimate URLs as low risk (4 ms)
+    Brand Impersonation Detection
+      ✓ should detect typosquatting attempts (1 ms)
+      ✓ should detect brand names in subdomains (1 ms)
+    Technical Indicators
+      ✓ should detect IP address URLs
+      ✓ should detect suspicious TLDs
+      ✓ should detect excessive subdomains
+      ✓ should detect special characters in domain (1 ms)
+    Content and Pattern Detection
+      ✓ should detect suspicious keywords
+      ✓ should detect suspicious file extensions (1 ms)
+      ✓ should detect data URI schemes
+      ✓ should detect URL encoding abuse
+    Combined Risk Factors
+      ✓ should identify high-risk URLs with multiple suspicious features
+    Edge Cases
+      ✓ should handle invalid URLs (1 ms)
+      ✓ should handle URLs with no suspicious features
+      ✓ should handle URLs with query parameters
+  Feature Detection with Real Data
+    Technical Indicators
+      ✓ should detect IP address URLs (17 ms)
+      ✓ should detect suspicious TLDs (4978 ms)
+      ✕ should detect excessive subdomains (974 ms)
+    Content and Pattern Detection
+      ✕ should detect suspicious keywords in real phishing URLs (38 ms)
+      ✕ should detect suspicious file extensions (9 ms)
+    Legitimate URL Analysis
+      ✓ should correctly identify legitimate URLs as low risk (1 ms)
+  Dataset Testing
+    ✓ should show detection results for each URL (206 ms)
+
+  ● Feature Detection with Real Data › Technical Indicators › should detect excessive subdomains
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "EXCESSIVE_SUBDOMAINS"
+    Received array: ["SPECIAL_CHARS_IN_DOMAIN", "BRAND_IMPERSONATION"]
+
+      283 |       excessiveSubdomainUrls.forEach(url => {
+      284 |         const result = analyzer.analyzeUrl(url);
+    > 285 |         expect(result.flags).toContain('EXCESSIVE_SUBDOMAINS');
+          |                              ^
+      286 |       });
+      287 |     });
+      288 |   });
+
+      at src/utils/__tests__/urlAnalysis.test.ts:285:30
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (src/utils/__tests__/urlAnalysis.test.ts:283:30)
+
+  ● Feature Detection with Real Data › Content and Pattern Detection › should detect suspicious keywords in real phishing URLs
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      295 |       keywordUrls.forEach(url => {
+      296 |         const result = analyzer.analyzeUrl(url);
+    > 297 |         expect(result.suspiciousPatterns.length).toBeGreaterThan(0);
+          |                                                  ^
+      298 |         const hasKeyword = result.suspiciousPatterns.some(pattern => 
+      299 |           ['login', 'secure', 'verify', 'account'].includes(pattern));
+      300 |         expect(hasKeyword).toBe(true);
+
+      at src/utils/__tests__/urlAnalysis.test.ts:297:50
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (src/utils/__tests__/urlAnalysis.test.ts:295:19)
+
+  ● Feature Detection with Real Data › Content and Pattern Detection › should detect suspicious file extensions
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "SUSPICIOUS_FILE_EXTENSION"
+    Received array: ["BRAND_IMPERSONATION"]
+
+      308 |         suspiciousExtUrls.forEach(url => {
+      309 |           const result = analyzer.analyzeUrl(url);
+    > 310 |           expect(result.flags).toContain('SUSPICIOUS_FILE_EXTENSION');
+          |                                ^
+      311 |         });
+      312 |       } else {
+      313 |         console.log('No URLs with suspicious extensions found in the dataset');
+
+      at src/utils/__tests__/urlAnalysis.test.ts:310:32
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (src/utils/__tests__/urlAnalysis.test.ts:308:27)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 19 passed, 22 total
+Snapshots:   0 total
+Time:        7.205 s, estimated 8 s
+Ran all test suites matching /src\/utils\/__tests__\/urlAnalysis.test.ts/i.
+ ELIFECYCLE  Test failed. See above for more details.
