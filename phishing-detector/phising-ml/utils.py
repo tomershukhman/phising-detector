@@ -135,23 +135,23 @@ def predict_phishing(url):
         
         # Get prediction probabilities
         probs = model.predict_proba(features_scaled)[0]
-        phishing_prob = probs[0]  # Probability of being phishing (class 0)
+        phishing_prob = probs[0]  # probability of being phishing (class 0)
         
-        # Use a threshold of 0.7 for higher precision on phishing detection
-        prediction = 0 if phishing_prob > 0.7 else 1
+        # Use a threshold of 0.5 for balanced precision/recall
+        prediction = 0 if phishing_prob >= 0.5 else 1
         confidence = max(phishing_prob, 1 - phishing_prob)
         
         return {
             'prediction': int(prediction),
             'confidence': float(confidence),
-            'is_phishing': bool(prediction == 0)  # 0 is phishing in our dataset
+            'is_phishing': bool(prediction == 0)  # 0 means phishing
         }
         
     except Exception as e:
         print(f"Error in prediction: {str(e)}")
         # For edge cases that cause errors, return as suspicious with low confidence
         return {
-            'prediction': 0,
+            'prediction': 0,  # Mark as phishing
             'confidence': 0.51,
             'is_phishing': True
         }

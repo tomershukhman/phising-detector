@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 from utils import predict_phishing
 
@@ -41,7 +40,7 @@ def evaluate_urls():
     # Evaluate each URL
     for url, true_label in urls_data:
         prediction = predict_phishing(url)
-        predicted_label = 0 if prediction['is_phishing'] else 1
+        predicted_label = 0 if prediction['is_phishing'] else 1  # 0 for phishing, 1 for legitimate
         confidence = prediction['confidence']
             
         results.append({
@@ -65,14 +64,15 @@ def evaluate_urls():
     print("=" * 50)
     print("              Predicted")
     print("              Legitimate  Phishing")
-    print(f"Actual  Legitimate  {cm[1][1]:<10d} {cm[1][0]:<10d}")
-    print(f"        Phishing    {cm[0][1]:<10d} {cm[0][0]:<10d}")
+    print(f"Actual  Legitimate  {cm[0][0]:<10d} {cm[0][1]:<10d}")
+    print(f"        Phishing    {cm[1][0]:<10d} {cm[1][1]:<10d}")
     
     # Display classification report
     print("\nClassification Report:")
     print("=" * 50)
     print(classification_report(true_labels, predicted_labels, 
-                              target_names=['Phishing', 'Legitimate']))
+                              target_names=['Legitimate', 'Phishing'],
+                              zero_division=0))
 
 if __name__ == '__main__':
     evaluate_urls()
