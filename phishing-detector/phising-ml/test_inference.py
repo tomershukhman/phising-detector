@@ -67,67 +67,120 @@ def predict_url(url, model, feature_columns=None):
 
 def main():
     """Main function to run inference on a set of URLs"""
-    print("Phishing Detector - Inference Test")
-    print("==================================")
+    print("Phishing Detector - Advanced Challenge Test")
+    print("===========================================")
     
     # Load the model
     model = load_model()
     feature_columns = get_feature_columns(model)
     
-    # Define challenging legitimate URLs
-    # These URLs have characteristics that might trigger false positives
-    legitimate_urls = [
-        "https://login.microsoftonline.com/common/oauth2/authorize?client_id=29d9ed98-a469-4536-ade2-f981bc1d605e",  # Long URL with parameters
-        "https://accounts.google.com/o/oauth2/auth/identifier?client_id=717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com",  # Long auth URL
-        "https://secure2.store.apple.com/shop/signIn/orders?r=SCDHYHP7CY4H9KXEX",  # Secure subdomain with number
-        "https://github.com/login?return_to=%2Fjoin%3Fsource%3Dheader-home",  # URL with encoded parameters
-        "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com",  # Complex auth URL
-        "https://www.paypal.com/signin?returnUri=https%3A%2F%2Fwww.paypal.com%2Fmyaccount%2Ftransfer",  # Auth URL with returnUri
-        "https://www.bankofamerica.com/online-banking/sign-in/",  # Banking URL with dashes
-        "https://account.t-mobile.com/oauth2/v1/auth/login-password",  # Mobile provider with version in URL
-        "https://appleid.apple.com/auth/oauth2/authorize?client_id=com.apple.gs.xcode.auth",  # Apple ID auth URL
-        "https://login.yahoo.com/?.src=ym&.intl=us&.lang=en-US&.done=https%3A%2F%2Fmail.yahoo.com"  # Yahoo login with multiple parameters
-    ]
-    
-    # Challenging phishing URLs - these are more sophisticated examples
-    # These are constructed examples and should not be real phishing sites
-    suspicious_urls = [
-        "https://login-microsoft365.com/signin",  # Convincing domain with dash
-        "https://accounts-google.com/signin/v2/challenge/pwd",  # Convincing domain with legitimate-looking path
-        "https://appleid-verify.com/manage/overview",  # Brand + action word domain
-        "https://www.paypaI.com/us/signin",  # Homograph attack (capital I instead of l)
-        "https://amazonprime.delivery/tracking/order",  # Brand + related word domain
-        "https://secure-bankofamerica.com/login.php",  # Secure prefix with brand
-        "https://www.dropbox.security-check.com/verify",  # Subdomain using brand name
-        "https://netflix-account-services.com/renew-membership",  # Service-related domain
-        "https://online.banking-wells-fargo.com/auth",  # Legitimate-looking banking URL
-        "https://www.linkedin.com.profile-view.xyz/",  # Path after TLD
-        "https://facebook-login-secure.herokuapp.com/",  # Popular hosting service
-        "https://instagram-verify.onrender.com/confirm-identity",  # Cloud platform with brand
-        "https://confirm-chase-account.vercel.app/",  # Modern hosting platform
-        "https://www.docusign.com.document-verify.site/signing"  # Brand with action words
-    ]
-    
-    # For advanced testing - URLs with mixed signals
-    edge_case_urls = [
-        # Legitimate but suspicious-looking URLs
-        "https://sandbox.paypal.com/webapps/auth/login",  # Testing subdomain of legitimate site
-        "https://test-payment.adyen.com/hpp/pay.shtml",  # Payment processor test environment
-        "https://demo.stripe.com/v3/elements?login=true",  # Payment demo site
-        "https://developer-account.intel.com/dashboard/2FA",  # Developer portal with number
-        "https://login.salesforce.com/secur/forgotpassword.jsp",  # Enterprise login with JSP
+    # CATEGORY 1: EXTREMELY DECEPTIVE PHISHING URLS
+    # These are sophisticated phishing attempts using various advanced techniques
+    sophisticated_phishing_urls = [
+        # Typosquatting (character replacement/homograph)
+        "https://www.аррӏе.com/icloud/login",  # Cyrillic 'а' and 'р' characters look like Latin 'a' and 'p'
+        "https://www.faceboоk.com/login.php",  # Latin 'о' vs Cyrillic 'о'
+        "https://www.microsоft.com/en-us/security",  # Another homograph attack with Cyrillic 'о'
+        "https://www.amаzon.com/verify/account",  # Cyrillic 'а' instead of Latin 'a'
         
-        # Phishing but with sophisticated techniques
-        "https://review-account-security.com/microsoft/sso",  # Generic domain with brand in path
-        "https://credential-verification.com/google/signin",  # Generic domain with recognizable path
-        "https://drive-google.share-document.com/view",  # Convincing domain combination
-        "https://secure.banking-updates.com/chase/login",  # Security words with brand in path
-        "https://mail.google.com.mailbox-verify.site/signin"  # Full domain prefix of legitimate site
+        # Subdomain manipulation
+        "https://login.microsoft.com.security-check-required.com/auth",  # Full domain as subdomain
+        "https://accounts-google.com.verification.biz/signin",  # Domain + subdomain tricks
+        "https://bankofamerica.com.secure-banking.us/login",  # Using target domain as subdomain
+        "https://www.paypal.com.account-security.app/",  # Modern TLD (.app) with legit domain as subdomain
+        
+        # Domain variations with security terms
+        "https://secure-wells-fargo-bank.com/auth",  # Security words + brand
+        "https://login-chase-secure-bank.com/verify",  # Multiple security terms
+        "https://verified-appleid.cloud/manage",  # Security word with cloud TLD
+        "https://authverify-amazon.co/review",  # Action verbs combined
+        
+        # Path manipulation (legitimate domain in path)
+        "https://security-alert.com/microsoft.com/account/verify",  # Legitimate domain in path
+        "https://verification-center.net/chase.com/statement",  # Banking domain in path
+        "https://account-update.org/paypal.com/login",  # Payment provider in path
+        "https://confirm-activity.site/instagram/unusual-login",  # Social media + action
+        
+        # Modern hosting platforms (harder to detect)
+        "https://netflix-account-update.netlify.app/",  # Netlify (static hosting)
+        "https://amazon-delivery-tracking.vercel.app/",  # Vercel (modern hosting)
+        "https://apple-id-validate.web.app/",  # Firebase hosting
+        "https://docusign-document-p346.onrender.com/",  # Render (cloud platform)
     ]
     
-    # Combine edge cases with main test sets for comprehensive testing
-    legitimate_urls.extend([url for url in edge_case_urls[:5]])  # First 5 are legitimate
-    suspicious_urls.extend([url for url in edge_case_urls[5:]])  # Rest are phishing
+    # CATEGORY 2: LEGITIMATE URLS WITH SUSPICIOUS CHARACTERISTICS
+    # These are real legitimate URLs that might trigger false positives
+    deceptive_legitimate_urls = [
+        # Legitimate sites with complex/suspicious looking URLs
+        "https://login.live.com/login.srf?wa=wsignin1.0&rpsnv=13&ct=1618675326",  # Microsoft complex login URL
+        "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com",  # Google complex login
+        "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.identity=http%3A%2F%2Fspecs.openid.net",  # Amazon OAuth
+        "https://auth0.openai.com/u/login/identifier?state=hKFo2SBMVkR5b19yREIweHB",  # Auth0 login URL
+        
+        # Legitimate but with security/verification terms
+        "https://secure.checkout.visa.com/checkout-widget/assets/img/src",  # 'secure' in legitimate domain
+        "https://verify.twilio.com/v2/phone-numbers/verification/start",  # 'verify' in legitimate domain
+        "https://id-verification.amazonaws.com/session",  # 'verification' in AWS subdomain
+        "https://authentication.td.com/uap-ui/?consumer=easyweb",  # 'authentication' in bank domain
+        
+        # Legitimate but with uncommon TLDs or structures
+        "https://auth.tesla.cn/oauth2/v3/authorize",  # Less common TLD (.cn)
+        "https://signin.aws.amazon.com/oauth",  # Multiple subdomains for service
+        "https://security-center.nasdaq.com/account/login",  # 'security' term in legitimate subdomain
+        "https://www.instagram-engineering.com/blog",  # Legitimate brand + hyphen (official engineering blog)
+        
+        # Legitimate sandbox/development environments
+        "https://test-sandbox.adyen.com/ca/ca.shtml",  # Payment processor test environment
+        "https://developer-admin.sandbox.checkout.com/login",  # Dev sandbox with 'admin'
+        "https://test.authorize.net/sandbox/account",  # Testing environment
+        "https://sandbox.payfast.dev/engine/process",  # Payment sandbox environment
+        
+        # Legitimate but with URL structure similar to phishing
+        "https://demo.stripe.com/account/login?redirect=%2Fdashboard",  # Demo site with redirect parameter
+        "https://classroom.github.com/auth/github?auth_type=student",  # GitHub classroom auth
+        "https://www.office.com/login?es=Click&ru=%2Fsetup",  # Microsoft Office login with parameters
+        "https://login.mailchimp.com/oauth2/v1/authorize?response_type=code"  # OAuth flow
+    ]
+    
+    # CATEGORY 3: EXTREMELY CHALLENGING EDGE CASES
+    # These URLs are specifically designed to be very hard to classify correctly
+    edge_case_urls = [
+        # Legitimate but suspicious subdirectories using security terms
+        "https://github.com/security/advisories/report",  # 'security' in path but legitimate
+        "https://twitter.com/account/verify_credentials",  # 'verify' in path of legitimate site
+        "https://developer.paypal.com/api/auth-credentials/",  # Auth in legitimate developer portal
+        "https://help.netflix.com/legal/security-verification",  # Security term in help page
+        
+        # Phishing - domains that look very close to legitimate
+        "https://www.cloudflare-cdn.com/signin",  # Not the real Cloudflare domain
+        "https://checkout-paypal-secure.com/review",  # Multiple legitimate terms combined
+        "https://my-appleid.cloud.com/manage",  # Combining brand with legitimate term
+        "https://onedrive-sharepoint.com/files/document",  # Two Microsoft products combined
+        
+        # Legitimate with oauth tokens and many parameters (very complex)
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6-1d93765276ca&redirect_uri=https%3A%2F%2Fwww.office.com%2Flandingv2&response_type=code%20id_token&scope=openid%20profile%20https%3A%2F%2Fwww.office.com%2Fv2%2FOfficeHome.All",  # Microsoft OAuth
+        "https://accounts.google.com/o/oauth2/v2/auth/identifier?client_id=717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com&scope=profile%20email&redirect_uri=https%3A%2F%2Fstackauth.com%2Fauth%2Foauth2%2Fgoogle&state=%7B%22sid%22%3A1%2C%22st%22%3A%2259%3A3%3Abbc%2C16%3A9fbf5998a53a6de2%2C10%3A1647695052%2C16%3A66ba0b7fb39c10da%2C106e44857549041e621c02f3436a836b46e65219da2d0b76e36d7423025f9fbd%22%2C%22cid%22%3A%22717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com%22%2C%22k%22%3A%22Google%22%2C%22ses%22%3A%22c6c564513fa648049c388a518e6cf938%22%7D&response_type=code&service=lso&o2v=2&flowName=GeneralOAuthFlow",  # Google OAuth with many parameters
+        
+        # Phishing - multi-method attack (combining multiple techniques)
+        "https://signin.ebay-verify.secure-id.payment.update.com-tx.xyz/",  # Multiple subdomains with brands
+        "https://security.google.auth.com.verification-support.online/account",  # Many security terms + brand
+        
+        # Legitimate but very unusual URL structures
+        "https://for-the-badge.blink1073.repl.co/badges/releases/Netflix?repository=renovate",  # Custom service on replit
+        "https://us-central1-visualism-dev.cloudfunctions.net/api/auth/callback/github",  # Google Cloud Function URL
+        
+        # Phishing that mimics URL shorteners or redirects
+        "https://bit.ly.url-shortener-redirect.com/g00gl3",  # Fake URL shortener
+        "https://rb.gy.click-confirmation.online/amzn-delivery",  # Fake shortened URL
+        
+        # Extremely deceptive phishing using Unicode character tricks
+        "https://www.xn--pple-43d.com/signin",  # Punycode for apple with dots under 'a'
+        "https://xn--gogle-0nf.com/mail",  # Punycode for google with accent 
+    ]
+    
+    # Combine into test sets
+    phishing_urls = sophisticated_phishing_urls + edge_case_urls[4:8] + edge_case_urls[12:14] + edge_case_urls[-2:]
+    legitimate_urls = deceptive_legitimate_urls + edge_case_urls[0:4] + edge_case_urls[8:12] + edge_case_urls[14:16]
     
     results = []
     true_labels = []
@@ -157,9 +210,9 @@ def main():
         except Exception as e:
             print(f"✗ Error with {url}: {e}")
     
-    # Test suspicious URLs
+    # Test phishing URLs
     print("\nTesting sophisticated phishing URLs...")
-    for url in suspicious_urls:
+    for url in phishing_urls:
         try:
             start_time = time.time()
             result = predict_url(url, model, feature_columns)
@@ -186,14 +239,19 @@ def main():
     table_data = []
     
     for result in results:
+        # Determine if the prediction was correct
+        is_correct = result["true_label"] == result["prediction"]
+        correctness = "✓ Correct" if is_correct else "✗ Wrong"
+        
         table_data.append([
             result["url"][:60] + "..." if len(result["url"]) > 60 else result["url"],
             result["true_label"],
             result["prediction"],
+            correctness,
             f"{result['processing_time']:.2f}s"
         ])
     
-    headers = ["URL", "True Label", "Prediction", "Processing Time"]
+    headers = ["URL", "True Label", "Prediction", "Correctness", "Processing Time"]
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     
     # Calculate statistics
@@ -242,6 +300,24 @@ def main():
     print(f"Precision: {precision:.4f}")
     print(f"Recall:    {recall:.4f}")
     print(f"F1 Score:  {f1_score:.4f}")
-
+    
+    # Additional analysis - categorize errors
+    false_positive_examples = [r for r in results if r["true_label"] == "Legitimate" and r["prediction"] == "Phishing"]
+    false_negative_examples = [r for r in results if r["true_label"] == "Phishing" and r["prediction"] == "Legitimate"]
+    
+    if false_positive_examples:
+        print("\nFalse Positive Examples (Legitimate URLs classified as Phishing):")
+        for i, example in enumerate(false_positive_examples[:5], 1):  # Show up to 5 examples
+            print(f"{i}. {example['url']}")
+        if len(false_positive_examples) > 5:
+            print(f"...and {len(false_positive_examples) - 5} more")
+    
+    if false_negative_examples:
+        print("\nFalse Negative Examples (Phishing URLs classified as Legitimate):")
+        for i, example in enumerate(false_negative_examples[:5], 1):  # Show up to 5 examples
+            print(f"{i}. {example['url']}")
+        if len(false_negative_examples) > 5:
+            print(f"...and {len(false_negative_examples) - 5} more")
+    
 if __name__ == "__main__":
     main()

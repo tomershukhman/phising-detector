@@ -15,15 +15,17 @@ from googlesearch import search
 import pandas as pd
 import requests
 from urllib.parse import urlparse
+import os
 
 # This import is needed only when you run this file in isolation.
 import sys
 
 from patterns import *
 
-# Path
-LOCALHOST_PATH = "C:/Users/leand/Documents/FIEK/Tema_e_Diplomes/"
-DIRECTORY_NAME = "Kodi"
+# Path - use a relative path that will work in any environment
+# We don't need this for the extract_features implementation which doesn't use the file
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+INNERHTML_PATH = os.path.join(CURRENT_DIR, "innerHTML.txt")
 
 # Map feature values correctly between implementations
 # In utils.py, 1 is phishing and -1 is legitimate
@@ -66,9 +68,11 @@ def extract_features(url):
                 features['sslfinal_state'] = -1  # Legitimate
             except requests.exceptions.SSLError:
                 features['sslfinal_state'] = 1  # Phishing (SSL error)
+            except (requests.exceptions.RequestException, Exception) as e:
+                features['sslfinal_state'] = 0  # Suspicious - request failed
         else:
             features['sslfinal_state'] = 1  # Phishing (no HTTPS)
-    except:
+    except Exception:
         features['sslfinal_state'] = 1  # Default to phishing
     
     # Domain features
@@ -94,8 +98,19 @@ def extract_features(url):
         # Check iframe
         features['iframe'] = map_feature_value(i_frame(soup))
         
-    except:
-        # If can't fetch the page, set these features to -1 (suspicious)
+    except requests.exceptions.RequestException as e:
+        # If can't fetch the page due to request error, set features to suspicious
+        features['favicon'] = 1
+        features['https_token'] = 1 
+        features['request_url'] = 1
+        features['url_of_anchor'] = 1
+        features['links_in_tags'] = 1
+        features['sfh'] = 1
+        features['submitting_to_email'] = 1
+        features['redirect'] = 1
+        features['iframe'] = 1
+    except Exception as e:
+        # For any other error, default to suspicious
         features['favicon'] = 1
         features['https_token'] = 1 
         features['request_url'] = 1
@@ -268,8 +283,10 @@ def request_url(wiki, soup, domain):
 
     try:
         percentage = success / float(i) * 100
-    except:
+    except ZeroDivisionError:
         return 1
+    except Exception:
+        return 0  # Default to suspicious for other errors
 
     if percentage < 22.0:
         return 1
@@ -288,14 +305,16 @@ def url_of_anchor(wiki, soup, domain):
                 wiki in a['href'] or domain in a['href']):
             unsafe = unsafe + 1
         i = i + 1
-        # print a['href']
+        
     try:
         percentage = unsafe / float(i) * 100
-    except:
-        return 1
+    except ZeroDivisionError:
+        return 1  # No anchor tags - likely legitimate
+    except Exception:
+        return 0  # Other errors - suspicious
+        
     if percentage < 31.0:
         return 1
-        # return percentage
     elif 31.0 <= percentage < 67.0:
         return 0
     else:
@@ -316,10 +335,13 @@ def links_in_tags(wiki, soup, domain):
         if wiki in script['src'] or domain in script['src'] or len(dots) == 1:
             success = success + 1
         i = i + 1
+        
     try:
         percentage = success / float(i) * 100
-    except:
-        return 1
+    except ZeroDivisionError:
+        return 1  # No tags with links - likely legitimate
+    except Exception:
+        return 0  # Other errors - suspicious
 
     if percentage < 17.0:
         return 1
@@ -359,6 +381,15 @@ def abnormal_url(domain, url):
 
 
 def i_frame(soup):
+    """Check for suspicious iframes in the HTML"""
+    # First check correctly named iframe elements
+    for iframe in soup.find_all('iframe', width=True, height=True, frameBorder=True):
+        if iframe['width'] == "0" and iframe['height'] == "0" and iframe['frameBorder'] == "0":
+            return -1
+        if iframe['width'] == "0" or iframe['height'] == "0" or iframe['frameBorder'] == "0":
+            return 0
+            
+    # Also check for i_frame as in the original code (though this is likely a typo)
     for i_frames in soup.find_all('i_frame', width=True, height=True, frameBorder=True):
         if i_frames['width'] == "0" and i_frames['height'] == "0" and i_frames['frameBorder'] == "0":
             return -1
@@ -383,32 +414,40 @@ def age_of_domain(domain):
 
 
 def web_traffic(url):
-    # Alexa service has been discontinued, so we'll provide a fallback
-    # that doesn't require external service calls
-    try:
-        # Try original implementation first
-        with urllib.request.urlopen("http://data.alexa.com/data?cli=10&dat=s&url=" + url, timeout=5) as url_handle:
-            site = url_handle.read()
-            rank = BeautifulSoup(site, features="xml").find("REACH")['RANK']
-            rank = int(rank)
-            return 1 if rank < 100000 else 0
-    except Exception:
-        # If any error occurs (DNS, connection, timeout, etc.), use heuristics
-        # Check if the domain looks like a popular site
-        hostname = get_hostname_from_url(url)
-        
-        # List of known popular domains (simplified heuristic)
-        popular_domains = ['google', 'facebook', 'youtube', 'twitter', 
-                         'instagram', 'linkedin', 'github', 'apple',
-                         'microsoft', 'amazon', 'netflix', 'yahoo']
-                         
-        # Check if hostname contains any of the popular domain names
-        for domain in popular_domains:
-            if domain in hostname:
-                return 1  # Likely has good traffic
-        
-        # Default to 0 (suspicious) if we can't determine
-        return 0
+    """
+    Analyze web traffic for a given URL
+    
+    Since Alexa service has been discontinued, this uses alternative methods
+    """
+    hostname = get_hostname_from_url(url)
+    
+    # List of known popular domains (simplified heuristic)
+    popular_domains = [
+        'google', 'facebook', 'youtube', 'twitter', 'instagram', 'linkedin', 
+        'github', 'apple', 'microsoft', 'amazon', 'netflix', 'yahoo', 'ebay',
+        'paypal', 'spotify', 'adobe', 'dropbox', 'salesforce', 'slack', 'zoom',
+        'twitch', 'reddit', 'tiktok', 'snapchat', 'pinterest', 'walmart', 'target',
+        'chase', 'bankofamerica', 'wellsfargo', 'citi'
+    ]
+    
+    # Check if hostname contains any of the popular domain names
+    for domain in popular_domains:
+        if domain in hostname and (
+            # Make sure it's not just a substring but a major part of the domain
+            domain == hostname or 
+            hostname.startswith(domain + '.') or
+            hostname.endswith('.' + domain + '.') or
+            hostname.endswith('.' + domain) or
+            '.' + domain + '.' in hostname
+        ):
+            return 1  # Legitimate - likely has good traffic
+    
+    # Check domain length - extremely long domains are suspicious
+    if len(hostname) > 30:
+        return -1  # Phishing - suspicious domain length
+    
+    # Default to suspicious if we can't determine
+    return 0
 
 
 def google_index(url):
@@ -419,8 +458,13 @@ def google_index(url):
 def statistical_report(url, hostname):
     try:
         ip_address = socket.gethostbyname(hostname)
-    except:
+    except socket.gaierror:
+        # Hostname couldn't be resolved
         return -1
+    except Exception:
+        # Any other exception
+        return 0
+        
     url_match = re.search(suspicious_tlds, url)
     ip_match = re.search(suspicious_ips, ip_address)
     if url_match:
@@ -448,13 +492,17 @@ def get_hostname_from_url(url):
 def get_domain_from_hostname(hostname):
     try:
         domain = whois.whois(hostname)
-    except:
-        domain = -1
-    return domain
+        return domain
+    except whois.parser.PywhoisError:
+        # Domain doesn't exist
+        return -1
+    except Exception:
+        # Any other exception
+        return -1
 
 
 def main(url):
-    with open(LOCALHOST_PATH + DIRECTORY_NAME + '/innerHTML.txt', 'r', encoding='utf8') as file:
+    with open(INNERHTML_PATH, 'r', encoding='utf8') as file:
         soup_string = file.read()
 
     soup = BeautifulSoup(soup_string, 'html.parser')
