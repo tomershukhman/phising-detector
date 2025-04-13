@@ -1,471 +1,729 @@
 import re
+import socket
+import requests
 from urllib.parse import urlparse
-import tldextract
+import whois
+from bs4 import BeautifulSoup
+import dns.resolver
 import pandas as pd
-import numpy as np
-import joblib
+from datetime import datetime
 
-def extract_url_features(url):
-    """Extract features from a URL without making HTTP requests"""
+def extract_features(url):
+    """
+    Extract only the 22 phishing detection features we need from a URL
+    
+    Args:
+        url: The URL string to analyze
+        
+    Returns:
+        Dictionary containing the extracted features
+    """
     features = {}
-    url = str(url).lower()
-
-    # --- Basic Length Features ---
-    features['URLLength'] = len(url)
-
-    # --- Parsing Components ---
+    
+    # URL-based features
+    features['url_length'] = check_url_length(url)
+    features['shortining_service'] = check_shortening_service(url)
+    features['having_at_symbol'] = check_at_symbol(url)
+    features['double_slash_redirecting'] = check_double_slash_redirect(url)
+    features['prefix_suffix'] = check_prefix_suffix(url)
+    features['having_sub_domain'] = check_sub_domain(url)
+    features['sslfinal_state'] = check_ssl_final_state(url)
+    features['domain_registration_length'] = check_domain_registration_length(url)
+    features['favicon'] = check_favicon(url)
+    features['https_token'] = check_https_token(url)
+    
     try:
-        parsed_url = urlparse(url)
-        extracted_domain = tldextract.extract(url)
-        domain_name = extracted_domain.domain
-        subdomain = extracted_domain.subdomain
-        tld = extracted_domain.suffix
-        full_domain = extracted_domain.registered_domain
-
-        features['DomainLength'] = len(full_domain) if full_domain else 0
-        features['PathLength'] = len(parsed_url.path)
-        features['QueryLength'] = len(parsed_url.query)
-        features['NumSubdomains'] = len(subdomain.split('.')) if subdomain else 0
-        features['TLDLength'] = len(tld) if tld else 0
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Domain structure features
-        features['HasSubdomain'] = 1 if subdomain else 0
-        features['SubdomainLength'] = len(subdomain) if subdomain else 0
-        features['DomainNameLength'] = len(domain_name)
-        features['NumDots'] = url.count('.')
-        features['NumDashes'] = url.count('-')
+        # HTML content-based features
+        features['request_url'] = check_request_url(url, soup)
+        features['url_of_anchor'] = check_url_anchor(url, soup)
+        features['links_in_tags'] = check_links_in_tags(url, soup)
+        features['sfh'] = check_sfh(url, soup)
+        features['submitting_to_email'] = check_submit_to_email(soup)
+        features['redirect'] = check_redirect(response)
+        features['iframe'] = check_iframe(soup)
         
-        # URL component entropy (measure of randomness/complexity)
-        features['DomainEntropy'] = calculate_entropy(domain_name)
-        features['SubdomainEntropy'] = calculate_entropy(subdomain) if subdomain else 0
-        features['PathEntropy'] = calculate_entropy(parsed_url.path)
-        
-        # Path analysis
-        path_parts = parsed_url.path.split('/')
-        features['PathDepth'] = len([p for p in path_parts if p])
-        features['MaxPathPartLength'] = max([len(p) for p in path_parts if p], default=0)
-        
-        # Query analysis
-        query_params = parsed_url.query.split('&')
-        features['NumQueryParams'] = len([q for q in query_params if q])
-        features['MaxQueryParamLength'] = max([len(q) for q in query_params if q], default=0)
+    except:
+        # If can't fetch the page, set these features to -1 (suspicious)
+        features['request_url'] = -1
+        features['url_of_anchor'] = -1
+        features['links_in_tags'] = -1
+        features['sfh'] = -1
+        features['submitting_to_email'] = -1
+        features['redirect'] = -1
+        features['iframe'] = -1
 
-    except Exception:
-        features.update({
-            'DomainLength': 0, 'PathLength': 0, 'QueryLength': 0,
-            'NumSubdomains': 0, 'TLDLength': 0, 'HasSubdomain': 0,
-            'SubdomainLength': 0, 'DomainNameLength': 0, 'NumDots': 0,
-            'NumDashes': 0, 'DomainEntropy': 0, 'SubdomainEntropy': 0,
-            'PathEntropy': 0, 'PathDepth': 0, 'MaxPathPartLength': 0,
-            'NumQueryParams': 0, 'MaxQueryParamLength': 0
-        })
-
-    # --- Character Distribution Features ---
-    features['NumDigits'] = sum(c.isdigit() for c in url)
-    features['NumLetters'] = sum(c.isalpha() for c in url)
-    features['NumSpecialChars'] = len(re.findall(r'[^a-z0-9\.]', url))
+    # External check features
+    features['abnormal_url'] = check_abnormal_url(url)
+    features['age_of_domain'] = check_age_of_domain(url)
+    features['dnsrecord'] = check_dns_record(url)
+    features['web_traffic'] = check_web_traffic(url)
+    features['google_index'] = check_google_index(url)
     
-    # Character type ratios
-    total_len = len(url) if len(url) > 0 else 1
-    features['DigitRatio'] = features['NumDigits'] / total_len
-    features['LetterRatio'] = features['NumLetters'] / total_len
-    features['SpecialCharRatio'] = features['NumSpecialChars'] / total_len
-    
-    # Sequential character patterns
-    features['ConsecutiveDigits'] = len(re.findall(r'\d{2,}', url))
-    features['ConsecutiveSpecialChars'] = len(re.findall(r'[^a-z0-9\.]{2,}', url))
-    
-    # URL structure indicators
-    features['IsHTTPS'] = 1 if parsed_url and parsed_url.scheme == 'https' else 0
-    features['HasIPAddress'] = 1 if re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', url) else 0
-    features['HasAtSymbol'] = 1 if '@' in url else 0
-    features['HasDoubleSlash'] = 1 if parsed_url and '//' in parsed_url.path else 0
-    features['HasHexChars'] = 1 if re.search(r'%[0-9a-fA-F]{2}', url) else 0
-    
-    # Calculate frequency distribution of characters
-    char_freq = {}
-    for char in url:
-        char_freq[char] = char_freq.get(char, 0) + 1
-    features['UniqueCharsRatio'] = len(char_freq) / total_len
-    features['MaxCharFrequency'] = max(char_freq.values()) / total_len if char_freq else 0
+    return features
 
-    return pd.Series(features)
-
-def calculate_entropy(text):
-    """Calculate Shannon entropy of a string"""
-    if not text:
-        return 0
-    text = str(text)
-    prob = [float(text.count(c)) / len(text) for c in set(text)]
-    return -sum(p * pd.np.log2(p) for p in prob)
-
-
-def predict_phishing(url):
+def check_url_length(url):
     """
-    Predict if a URL is phishing (0) or legitimate (1) using a hybrid approach
-    that combines ML predictions with rule-based analysis
+    Check if URL length is suspicious
+    
+    Returns:
+        1 (phishing) if URL is very long
+        0 (suspicious) if URL length is moderate
+        -1 (legitimate) if URL length is normal
     """
-    try:
-        # Extract features and get ML model prediction
-        ml_prediction = get_ml_prediction(url)
-        
-        # Perform rule-based analysis on the URL
-        rule_based_analysis = analyze_url_security(url)
-        
-        # Combine the ML prediction with rule-based analysis for final decision
-        final_prediction = make_final_decision(url, ml_prediction, rule_based_analysis)
-        
-        return final_prediction
-        
-    except Exception as e:
-        print(f"Error in prediction: {str(e)}")
-        return {
-            'prediction': 0,  # Mark as phishing
-            'confidence': 0.51,
-            'is_phishing': True,
-            'errors': str(e)
-        }
+    if len(url) < 54:
+        return -1  # Legitimate
+    elif len(url) >= 54 and len(url) <= 75:
+        return 0  # Suspicious
+    else:
+        return 1  # Phishing
 
-def get_ml_prediction(url):
-    """Get prediction from the ML model"""
-    try:
-        # Load the model and preprocessing objects
-        model = joblib.load('phishing_xgb_model.joblib')
-        scaler = joblib.load('phishing_scaler.joblib')
-        imputer = joblib.load('phishing_imputer.joblib')
-        feature_names = joblib.load('phishing_features.joblib')
-        
-        # Extract features
-        url_features = extract_url_features(url)
-        
-        # Create DataFrame with proper feature names
-        features_df = pd.DataFrame([url_features])
-        
-        # Ensure all required features are present and in correct order
-        missing_features = set(feature_names) - set(features_df.columns)
-        for feature in missing_features:
-            features_df[feature] = 0
-        
-        # Reorder columns to match training data
-        features_df = features_df[feature_names]
-        
-        # Apply preprocessing while maintaining feature names
-        features_imputed = pd.DataFrame(
-            imputer.transform(features_df),
-            columns=feature_names
-        )
-        
-        features_scaled = pd.DataFrame(
-            scaler.transform(features_imputed),
-            columns=feature_names
-        )
-        
-        # Get prediction probabilities
-        probs = model.predict_proba(features_scaled)[0]
-        phishing_prob = probs[0]  # Class 0: phishing
-        legitimate_prob = probs[1]  # Class 1: legitimate
-        
-        return {
-            'phishing_prob': phishing_prob,
-            'legitimate_prob': legitimate_prob,
-            'features': url_features
-        }
-        
-    except Exception as e:
-        print(f"ML prediction error: {str(e)}")
-        return {
-            'phishing_prob': 0.75,
-            'legitimate_prob': 0.25,
-            'error': str(e)
-        }
-
-def analyze_url_security(url):
+def check_shortening_service(url):
     """
-    Analyze URL for phishing indicators using rule-based methods
-    Returns dictionary of security indicators and an overall assessment
+    Check if URL uses shortening service
+    
+    Returns:
+        1 (phishing) if shortening service is used, -1 (legitimate) otherwise
     """
-    url_lower = url.lower()
-    parsed = urlparse(url_lower)
-    extracted = tldextract.extract(url_lower)
-    
-    domain = extracted.domain
-    subdomain = extracted.subdomain
-    suffix = extracted.suffix
-    registered_domain = extracted.registered_domain
-    
-    security_indicators = {}
-    phishing_score = 0
-    legitimate_score = 0
-    security_flags = []
-    
-    # --- STRUCTURAL ANALYSIS ---
-    
-    # Check use of HTTPS (legitimate indicator)
-    security_indicators['uses_https'] = parsed.scheme == 'https'
-    if security_indicators['uses_https']:
-        legitimate_score += 1
-    
-    # Check for IP address instead of domain (phishing indicator)
-    security_indicators['is_ip_address'] = bool(re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', domain))
-    if security_indicators['is_ip_address']:
-        phishing_score += 3
-        security_flags.append('IP address used as domain')
-    
-    # Check for URL shorteners (suspicious indicator)
-    shortener_domains = ['bit.ly', 'tinyurl.com', 'goo.gl', 't.co', 'buff.ly', 'j.mp', 'ow.ly']
-    security_indicators['is_shortener'] = any(sd in url_lower for sd in shortener_domains)
-    if security_indicators['is_shortener']:
-        phishing_score += 1
-        security_flags.append('URL shortener detected')
-    
-    # Check for suspicious TLDs often used in phishing
-    suspicious_tlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'xyz', 'info', 'top', 'pw']
-    security_indicators['has_suspicious_tld'] = suffix in suspicious_tlds
-    if security_indicators['has_suspicious_tld']:
-        phishing_score += 2
-        security_flags.append(f'Suspicious TLD: .{suffix}')
-    
-    # Check common legitimate TLDs
-    common_tlds = ['com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp']
-    security_indicators['has_common_tld'] = suffix in common_tlds
-    if security_indicators['has_common_tld']:
-        legitimate_score += 1
-    
-    # --- DOMAIN ANALYSIS ---
-    
-    # Check domain length (excessively long domains are suspicious)
-    security_indicators['domain_length'] = len(domain)
-    if security_indicators['domain_length'] > 30:
-        phishing_score += 1
-        security_flags.append('Excessively long domain name')
-    
-    # Check for excessive subdomain levels
-    if subdomain:
-        subdomain_parts = subdomain.split('.')
-        security_indicators['subdomain_count'] = len(subdomain_parts)
-        if security_indicators['subdomain_count'] > 3:
-            phishing_score += 1
-            security_flags.append('Excessive subdomains')
-    
-    # Check for hyphens (more than 2 is suspicious)
-    security_indicators['hyphen_count'] = domain.count('-')
-    if security_indicators['hyphen_count'] > 2:
-        phishing_score += 1
-        security_flags.append('Multiple hyphens in domain')
-    
-    # Check for digits in domain (high ratio is suspicious)
-    digit_count = sum(c.isdigit() for c in domain)
-    digit_ratio = digit_count / len(domain) if len(domain) > 0 else 0
-    security_indicators['digit_ratio'] = digit_ratio
-    if digit_ratio > 0.5:
-        phishing_score += 1
-        security_flags.append('High ratio of digits in domain')
-    
-    # --- CONTENT ANALYSIS ---
-    
-    # Check for @symbol in URL (often used in phishing)
-    security_indicators['has_at_symbol'] = '@' in url_lower
-    if security_indicators['has_at_symbol']:
-        phishing_score += 3
-        security_flags.append('@ symbol in URL')
-    
-    # Check for double slash after protocol (redirect indication)
-    security_indicators['path_has_double_slash'] = '//' in parsed.path
-    if security_indicators['path_has_double_slash']:
-        phishing_score += 2
-        security_flags.append('Double slash in URL path')
-    
-    # Check for hexadecimal or encoded characters
-    security_indicators['has_hex_chars'] = bool(re.search(r'%[0-9a-f]{2}', url_lower))
-    if security_indicators['has_hex_chars']:
-        phishing_score += 1
-        security_flags.append('Hex-encoded characters')
-    
-    # --- BRAND ANALYSIS ---
-    
-    # Check for legitimate brand names as the registered domain
-    top_domains = [
-        'google.com', 'gmail.com', 'youtube.com', 'facebook.com', 'amazon.com', 
-        'twitter.com', 'instagram.com', 'linkedin.com', 'microsoft.com', 'apple.com', 
-        'github.com', 'stackoverflow.com', 'paypal.com', 'bankofamerica.com',
-        'chase.com', 'microsoftonline.com', 'wikipedia.org', 'yahoo.com'
+    shortening_services = [
+        'bit.ly', 'goo.gl', 'tinyurl.com', 't.co', 'tr.im', 'is.gd',
+        'cli.gs', 'ow.ly', 'shortened.it', 'shorte.st', 'go2l.ink',
+        'x.co', 'snip.ly', 'tiny.cc', 'cutt.ly', 'shorturl.at'
     ]
+    domain = urlparse(url).netloc
     
-    # Check if domain is an exact match to known legitimate domain
-    security_indicators['is_known_domain'] = registered_domain in top_domains
-    if security_indicators['is_known_domain']:
-        legitimate_score += 3
-    
-    # Check for brand names in URL but not as the main domain (phishing sign)
-    brands = ['google', 'facebook', 'amazon', 'apple', 'microsoft', 'paypal', 'twitter', 'instagram', 
-              'linkedin', 'netflix', 'github', 'bankofamerica', 'chase', 'wellsfargo', 'amex']
-    
-    for brand in brands:
-        if brand in url_lower and brand not in registered_domain:
-            phishing_score += 2
-            security_flags.append(f'Brand name ({brand}) in URL but not main domain')
-            break
-    
-    # Check for typosquatted domain (common phishing tactic)
-    for legitimate_domain in top_domains:
-        legitimate_domain_parts = tldextract.extract(legitimate_domain)
-        legitimate_name = legitimate_domain_parts.domain
-        
-        # Simple edit distance check for typosquatting
-        if legitimate_name != domain and len(legitimate_name) > 4 and domain != '':
-            similarity_threshold = 0.8
-            similarity = string_similarity(legitimate_name, domain)
-            
-            if similarity > similarity_threshold and similarity < 1.0:
-                phishing_score += 3
-                security_flags.append(f'Possible typosquatting of {legitimate_domain}')
-                break
+    if domain in shortening_services:
+        return 1  # Phishing
+    return -1  # Legitimate
 
-    # --- SECURITY KEYWORDS ANALYSIS ---
-    
-    # Check for security-related words in domain (often in phishing)
-    security_terms = ['secure', 'login', 'account', 'verify', 'signin', 'security', 
-                    'update', 'confirm', 'password', 'authenticate', 'wallet']
-    
-    security_term_count = sum(1 for term in security_terms if term in domain)
-    security_indicators['security_term_count'] = security_term_count
-    
-    if security_term_count >= 2:
-        phishing_score += 2
-        security_flags.append('Multiple security terms in domain')
-    elif security_term_count == 1:
-        phishing_score += 1
-
-    # --- OVERALL ASSESSMENT ---
-    
-    # Calculate raw phishing and legitimate scores
-    raw_phishing_likelihood = phishing_score / 10 if phishing_score <= 10 else 1.0
-    raw_legitimate_likelihood = legitimate_score / 5 if legitimate_score <= 5 else 1.0
-    
-    # Normalize and balance the scores
-    total_score = raw_phishing_likelihood + raw_legitimate_likelihood
-    if total_score > 0:
-        normalized_phishing_score = raw_phishing_likelihood / total_score
-        normalized_legitimate_score = raw_legitimate_likelihood / total_score
-    else:
-        normalized_phishing_score = 0.5
-        normalized_legitimate_score = 0.5
-    
-    return {
-        'indicators': security_indicators,
-        'phishing_score': normalized_phishing_score,
-        'legitimate_score': normalized_legitimate_score,
-        'security_flags': security_flags
-    }
-
-def make_final_decision(url, ml_prediction, rule_analysis):
+def check_at_symbol(url):
     """
-    Make the final phishing/legitimate decision by combining ML and rule-based analysis
+    Check if URL contains @ symbol
+    
+    Returns:
+        1 (phishing) if @ symbol is present, -1 (legitimate) otherwise
     """
-    # Extract the probabilities from ML model
-    ml_phishing_prob = ml_prediction.get('phishing_prob', 0.5)
-    ml_legitimate_prob = ml_prediction.get('legitimate_prob', 0.5)
-    
-    # Extract rule-based analysis
-    rule_phishing_score = rule_analysis.get('phishing_score', 0.5)
-    rule_legitimate_score = rule_analysis.get('legitimate_score', 0.5)
-    security_flags = rule_analysis.get('security_flags', [])
-    
-    # Combine ML and rule-based probabilities with appropriate weights
-    # ML model is clearly biased, so we use a lower weight for it
-    ml_weight = 0.4
-    rule_weight = 0.6
-    
-    combined_phishing_prob = (ml_phishing_prob * ml_weight) + (rule_phishing_score * rule_weight)
-    combined_legitimate_prob = (ml_legitimate_prob * ml_weight) + (rule_legitimate_score * rule_weight)
-    
-    # Normalize combined probabilities
-    total_prob = combined_phishing_prob + combined_legitimate_prob
-    if total_prob > 0:
-        final_phishing_prob = combined_phishing_prob / total_prob
-        final_legitimate_prob = combined_legitimate_prob / total_prob
-    else:
-        final_phishing_prob = 0.5
-        final_legitimate_prob = 0.5
-    
-    # Make the final classification decision
-    if final_legitimate_prob >= final_phishing_prob:
-        prediction = 1  # legitimate
-        confidence = final_legitimate_prob
-        is_phishing = False
-    else:
-        prediction = 0  # phishing
-        confidence = final_phishing_prob
-        is_phishing = True
-    
-    # Debug info
-    print(f"URL: {url}")
-    print(f"ML: Phishing={ml_phishing_prob:.4f}, Legitimate={ml_legitimate_prob:.4f}")
-    print(f"Rule: Phishing={rule_phishing_score:.4f}, Legitimate={rule_legitimate_score:.4f}")
-    if security_flags:
-        print(f"Security flags: {', '.join(security_flags)}")
-    print(f"Final: Phishing={final_phishing_prob:.4f}, Legitimate={final_legitimate_prob:.4f}")
-    print(f"Prediction: {prediction} (1=legitimate, 0=phishing)")
-    
-    return {
-        'prediction': int(prediction),
-        'confidence': float(confidence),
-        'is_phishing': bool(is_phishing),
-        'probabilities': {
-            'phishing': float(final_phishing_prob),
-            'legitimate': float(final_legitimate_prob)
-        },
-        'ml_probabilities': {
-            'phishing': float(ml_phishing_prob),
-            'legitimate': float(ml_legitimate_prob)
-        },
-        'rule_scores': {
-            'phishing': float(rule_phishing_score),
-            'legitimate': float(rule_legitimate_score)
-        },
-        'security_flags': security_flags
-    }
+    if '@' in url:
+        return 1  # Phishing
+    return -1  # Legitimate
 
-def string_similarity(s1, s2):
-    """Calculate similarity between two strings (0 to 1)"""
-    if not s1 or not s2:
-        return 0.0
-        
-    # Convert to lowercase for case-insensitive comparison
-    s1, s2 = s1.lower(), s2.lower()
+def check_double_slash_redirect(url):
+    """
+    Check if URL contains '//' after domain in path
     
-    # Check for exact match
-    if s1 == s2:
-        return 1.0
-        
-    # Calculate Jaro-Winkler similarity
-    # This is a simplified version that gives higher scores to strings with matching prefixes
-    len_s1 = len(s1)
-    len_s2 = len(s2)
+    Returns:
+        1 (phishing) if // is in path, -1 (legitimate) otherwise
+    """
+    parsed = urlparse(url)
+    if '//' in parsed.path:
+        return 1  # Phishing
+    return -1  # Legitimate
+
+def check_prefix_suffix(url):
+    """
+    Check if URL contains dash (-) in domain
     
-    # Calculate common prefix length
-    prefix_len = 0
-    for i in range(min(len_s1, len_s2, 4)):  # Max 4 chars for prefix
-        if s1[i] == s2[i]:
-            prefix_len += 1
+    Returns:
+        1 (phishing) if dash is in domain, -1 (legitimate) otherwise
+    """
+    domain = urlparse(url).netloc
+    if '-' in domain:
+        return 1  # Phishing
+    return -1  # Legitimate
+
+def check_sub_domain(url):
+    """
+    Check number of sub-domains in URL
+    
+    Returns:
+        1 (phishing) if many subdomains
+        0 (suspicious) if moderate number of subdomains
+        -1 (legitimate) if normal number of subdomains
+    """
+    domain = urlparse(url).netloc
+    if domain.startswith('www.'):
+        domain = domain[4:]
+    
+    # Count dots in domain (excluding www. prefix)
+    dot_count = domain.count('.')
+    
+    if dot_count == 1:
+        return -1  # Legitimate
+    elif dot_count == 2:
+        return 0  # Suspicious
+    else:
+        return 1  # Phishing (more than 2 dots = multiple subdomains)
+
+def check_ssl_final_state(url):
+    """
+    Check SSL certificate and HTTPS protocol
+    
+    Returns:
+        1 (legitimate) if valid HTTPS and SSL
+        0 (suspicious) if mixed content
+        -1 (phishing) if no HTTPS or invalid SSL
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme == 'https':
+            # Check certificate by making a request
+            try:
+                response = requests.get(url, timeout=10, verify=True)
+                return 1  # Legitimate
+            except requests.exceptions.SSLError:
+                return -1  # Phishing (SSL error)
         else:
-            break
+            return -1  # Phishing (no HTTPS)
+    except:
+        return -1  # Default to phishing
     
-    # Simple edit distance calculation
-    max_len = max(len_s1, len_s2)
-    if max_len == 0:
-        return 0.0
+    return -1  # Default to phishing
+
+def check_domain_registration_length(url):
+    """
+    Check domain registration length
     
-    # Simple character matching
-    matches = 0
-    for c in s1:
-        if c in s2:
-            matches += 1
+    Returns:
+        1 (phishing) if domain registration is less than a year
+        -1 (legitimate) if longer registration or can't determine
+    """
+    try:
+        domain = urlparse(url).netloc
+        w = whois.whois(domain)
+        
+        # Check if expiration date is available
+        if w.expiration_date:
+            if isinstance(w.expiration_date, list):
+                expiration_date = w.expiration_date[0]
+            else:
+                expiration_date = w.expiration_date
+            
+            # Calculate years between now and expiration
+            current_date = datetime.now()
+            years_diff = (expiration_date.year - current_date.year)
+            
+            if years_diff <= 1:
+                return 1  # Phishing (short registration)
+            return -1  # Legitimate (long registration)
+    except:
+        return -1  # If error, assume legitimate
     
-    # Calculate basic similarity
-    base_sim = matches / max_len
+    return 1  # Default to phishing
+
+def check_favicon(url):
+    """
+    Check if favicon is loaded from external domain
     
-    # Add prefix bonus
-    prefix_bonus = prefix_len * 0.1  # Each matching prefix char adds 0.1
+    Returns:
+        1 (phishing) if favicon from external domain
+        0 (suspicious) if can't determine
+        -1 (legitimate) if favicon from same domain or no favicon
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        favicon = soup.find('link', rel=lambda r: r and ('icon' in r.lower() or 'shortcut icon' in r.lower()))
+        
+        if favicon and favicon.get('href'):
+            favicon_url = favicon['href']
+            
+            # Check if favicon URL is relative
+            if not favicon_url.startswith(('http://', 'https://')):
+                return -1  # Legitimate (favicon on same domain)
+            
+            # If favicon URL is absolute, check if domain matches
+            favicon_domain = urlparse(favicon_url).netloc
+            url_domain = urlparse(url).netloc
+            
+            if favicon_domain != url_domain:
+                return 1  # Phishing
+            return -1  # Legitimate
+    except:
+        return 0  # Suspicious if can't determine
     
-    return min(base_sim + prefix_bonus, 1.0)
+    return -1  # Default to legitimate (no favicon found)
+
+def check_https_token(url):
+    """
+    Check if HTTPS token exists in domain part
+    
+    Returns:
+        1 (phishing) if HTTPS in domain, -1 (legitimate) otherwise
+    """
+    domain = urlparse(url).netloc
+    if 'https' in domain:
+        return 1  # Phishing
+    return -1  # Legitimate
+
+def check_request_url(url, soup):
+    """
+    Check if external objects are loaded from different domain
+    
+    Returns:
+        1 (phishing) if many external objects
+        0 (suspicious) if moderate external objects
+        -1 (legitimate) if few or no external objects
+    """
+    try:
+        external_count = 0
+        total_count = 0
+        
+        url_domain = urlparse(url).netloc
+        
+        # Check images, videos, sounds, etc.
+        for img in soup.find_all('img', src=True):
+            total_count += 1
+            src = img['src']
+            if src.startswith('http'):
+                if url_domain not in urlparse(src).netloc:
+                    external_count += 1
+        
+        for audio in soup.find_all('audio', src=True):
+            total_count += 1
+            src = audio['src']
+            if src.startswith('http'):
+                if url_domain not in urlparse(src).netloc:
+                    external_count += 1
+        
+        for video in soup.find_all('video', src=True):
+            total_count += 1
+            src = video['src']
+            if src.startswith('http'):
+                if url_domain not in urlparse(src).netloc:
+                    external_count += 1
+        
+        if total_count > 0:
+            percentage = external_count / float(total_count) * 100
+            if percentage < 22.0:
+                return -1  # Legitimate
+            elif percentage >= 22.0 and percentage < 61.0:
+                return 0  # Suspicious
+            else:
+                return 1  # Phishing
+    except:
+        return 0  # Suspicious if error
+    
+    return -1  # Default to legitimate
+
+def check_url_anchor(url, soup):
+    """
+    Check URL in anchor tags
+    
+    Returns:
+        1 (phishing) if many anchors to external domains
+        0 (suspicious) if moderate anchors to external domains
+        -1 (legitimate) if few or no anchors to external domains
+    """
+    try:
+        url_domain = urlparse(url).netloc
+        
+        i = 0
+        unsafe = 0
+        
+        for a in soup.find_all('a', href=True):
+            i += 1
+            href = a['href']
+            
+            # Skip anchors that are just "#" or javascript
+            if href == "#" or href.startswith("javascript"):
+                unsafe += 1
+                continue
+                
+            # Check if href is a full URL and domain is different
+            if href.startswith('http'):
+                href_domain = urlparse(href).netloc
+                if href_domain != url_domain and href_domain != '':
+                    unsafe += 1
+        
+        if i == 0:
+            return -1  # Legitimate (no anchors)
+        
+        percentage = unsafe / float(i) * 100
+        
+        if percentage < 31.0:
+            return -1  # Legitimate
+        elif percentage >= 31.0 and percentage < 67.0:
+            return 0  # Suspicious
+        else:
+            return 1  # Phishing
+    except:
+        return -1  # Assume legitimate if error
+    
+    return -1  # Default to legitimate
+
+def check_links_in_tags(url, soup):
+    """
+    Check links in <Meta>, <Script> and <Link> tags
+    
+    Returns:
+        1 (phishing) if many external resources
+        0 (suspicious) if moderate external resources
+        -1 (legitimate) if few or no external resources
+    """
+    try:
+        url_domain = urlparse(url).netloc
+        
+        i = 0
+        external = 0
+        
+        for meta in soup.find_all('meta', content=True):
+            i += 1
+            content = meta['content']
+            if content.startswith('http'):
+                meta_domain = urlparse(content).netloc
+                if meta_domain != url_domain and meta_domain != '':
+                    external += 1
+        
+        for script in soup.find_all('script', src=True):
+            i += 1
+            src = script['src']
+            if src.startswith('http'):
+                script_domain = urlparse(src).netloc
+                if script_domain != url_domain and script_domain != '':
+                    external += 1
+        
+        for link in soup.find_all('link', href=True):
+            i += 1
+            href = link['href']
+            if href.startswith('http'):
+                link_domain = urlparse(href).netloc
+                if link_domain != url_domain and link_domain != '':
+                    external += 1
+        
+        if i == 0:
+            return -1  # Legitimate (no such tags)
+        
+        percentage = external / float(i) * 100
+        
+        if percentage < 17.0:
+            return -1  # Legitimate
+        elif percentage >= 17.0 and percentage < 81.0:
+            return 0  # Suspicious
+        else:
+            return 1  # Phishing
+    except:
+        return -1  # Assume legitimate if error
+    
+    return -1  # Default to legitimate
+
+def check_sfh(url, soup):
+    """
+    Check Server Form Handler (SFH)
+    
+    Returns:
+        1 (phishing) if SFH is about:blank or empty
+        0 (suspicious) if SFH to different domain
+        -1 (legitimate) otherwise
+    """
+    try:
+        url_domain = urlparse(url).netloc
+        
+        for form in soup.find_all('form', action=True):
+            action = form['action']
+            
+            # Empty action or about:blank
+            if action == "" or action == "about:blank":
+                return 1  # Phishing
+            
+            # Check if action is a URL with different domain
+            if action.startswith('http'):
+                action_domain = urlparse(action).netloc
+                if action_domain != url_domain and action_domain != '':
+                    return 0  # Suspicious
+        
+        return -1  # Legitimate (no suspicious forms)
+    except:
+        return -1  # Assume legitimate if error
+    
+    return -1  # Default to legitimate
+
+def check_submit_to_email(soup):
+    """
+    Check if form submits to email
+    
+    Returns:
+        1 (phishing) if form submits to email, -1 (legitimate) otherwise
+    """
+    try:
+        for form in soup.find_all('form'):
+            if form.get('action') and 'mailto:' in form.get('action'):
+                return 1  # Phishing
+            
+        # Look for mail() function in JavaScript
+        scripts = soup.find_all('script')
+        for script in scripts:
+            if script.string and 'mail(' in script.string:
+                return 1  # Phishing
+        
+        return -1  # Legitimate
+    except:
+        return -1  # Assume legitimate if error
+    
+    return -1  # Default to legitimate
+
+def check_abnormal_url(url):
+    """
+    Check if URL is abnormal based on WHOIS data
+    
+    Returns:
+        1 (phishing) if URL doesn't match WHOIS identity
+        -1 (legitimate) if URL matches identity or can't determine
+    """
+    try:
+        domain = urlparse(url).netloc
+        w = whois.whois(domain)
+        
+        # If domain name is not in the WHOIS database or hostname not found
+        if not w.domain_name:
+            return 1  # Phishing
+        
+        # Check if domain name appears in the URL
+        domain_name = str(w.domain_name)
+        if isinstance(w.domain_name, list):
+            domain_name = w.domain_name[0]
+        
+        # Remove TLD from domain name for comparison
+        if '.' in domain_name:
+            base_domain = domain_name.split('.')[0]
+            if base_domain.lower() not in url.lower():
+                return 1  # Phishing
+        
+        return -1  # Legitimate
+    except:
+        return 1  # Phishing if error (domain likely doesn't exist)
+    
+    return -1  # Default to legitimate
+
+def check_redirect(response):
+    """
+    Check for URL redirection
+    
+    Returns:
+        1 (phishing) if multiple redirections
+        0 (suspicious) if one redirection
+        -1 (legitimate) if no redirection
+    """
+    try:
+        if len(response.history) == 0:
+            return -1  # Legitimate (no redirection)
+        elif len(response.history) == 1:
+            return 0  # Suspicious (one redirection)
+        else:
+            return 1  # Phishing (multiple redirections)
+    except:
+        return 0  # Default to suspicious
+    
+    return 0  # Default to suspicious
+
+def check_iframe(soup):
+    """
+    Check for IFrame redirection
+    
+    Returns:
+        1 (phishing) if invisible iframes are present
+        0 (suspicious) if any iframes are present
+        -1 (legitimate) if no iframes
+    """
+    try:
+        iframes = soup.find_all('iframe')
+        for iframe in iframes:
+            # Check for invisible iframes (common in phishing)
+            if iframe.get('frameborder') == '0' or iframe.get('style') and 'display:none' in iframe.get('style'):
+                return 1  # Phishing
+        
+        if len(iframes) > 0:
+            return 0  # Suspicious
+        
+        return -1  # Legitimate (no iframes)
+    except:
+        return -1  # Assume legitimate if error
+    
+    return -1  # Default to legitimate
+
+def check_age_of_domain(url):
+    """
+    Check age of domain
+    
+    Returns:
+        1 (phishing) if domain is less than 6 months old
+        -1 (legitimate) if domain is older or can't determine
+    """
+    try:
+        domain = urlparse(url).netloc
+        w = whois.whois(domain)
+        
+        # Check if creation date is available
+        if w.creation_date:
+            if isinstance(w.creation_date, list):
+                creation_date = w.creation_date[0]
+            else:
+                creation_date = w.creation_date
+            
+            # Calculate domain age in months
+            current_date = datetime.now()
+            age = (current_date.year - creation_date.year) * 12 + (current_date.month - creation_date.month)
+            
+            if age >= 6:
+                return -1  # Legitimate (older than 6 months)
+            return 1  # Phishing (younger than 6 months)
+    except:
+        return 1  # Phishing if error (domain likely doesn't exist)
+    
+    return 1  # Default to phishing
+
+def check_dns_record(url):
+    """
+    Check DNS record
+    
+    Returns:
+        1 (phishing) if no DNS records found
+        -1 (legitimate) if DNS records exist
+    """
+    try:
+        domain = urlparse(url).netloc
+        dns_query = dns.resolver.resolve(domain, 'A')
+        if dns_query:
+            return -1  # Legitimate (DNS record exists)
+    except:
+        return 1  # Phishing (no DNS record or error)
+    
+    return -1  # Default to legitimate
+
+def check_web_traffic(url):
+    """
+    Check website traffic based on domain popularity
+    
+    Returns:
+        1 (phishing) if likely low traffic
+        0 (suspicious) if moderate traffic
+        -1 (legitimate) if likely high traffic
+    """
+    try:
+        domain = urlparse(url).netloc
+        
+        # Check for popular domains
+        popular_domains = [
+            'google', 'youtube', 'facebook', 'twitter', 'instagram', 'linkedin', 
+            'amazon', 'apple', 'microsoft', 'github', 'stackoverflow', 'reddit',
+            'wikipedia', 'yahoo', 'netflix', 'spotify', 'ebay', 'cnn'
+        ]
+        
+        # Extract base domain
+        base_domain = domain
+        if '.' in domain:
+            base_domain = domain.split('.')[0]
+            if base_domain.startswith('www'):
+                base_domain = domain.split('.')[1] if len(domain.split('.')) > 2 else base_domain
+        
+        # Check if it's a known popular domain
+        for popular in popular_domains:
+            if popular in base_domain.lower():
+                return -1  # High traffic (legitimate)
+        
+        # Try to check DNS records - domains with multiple records often have higher traffic
+        try:
+            dns_records = dns.resolver.resolve(domain, 'A')
+            if len(dns_records) > 1:
+                return 0  # Moderate traffic
+        except:
+            pass
+            
+        # If we can't determine, assume low traffic
+        return 1  # Low traffic (suspicious)
+    except:
+        return 1  # Default to suspicious
+
+def check_google_index(url):
+    """
+    Check if URL is likely indexed by Google
+    
+    Returns:
+        1 (phishing) if likely not indexed
+        -1 (legitimate) if likely indexed
+    """
+    try:
+        domain = urlparse(url).netloc
+        
+        # Popular domains are almost certainly indexed
+        popular_domains = [
+            'google', 'youtube', 'facebook', 'twitter', 'instagram', 'linkedin', 
+            'amazon', 'apple', 'microsoft', 'github', 'stackoverflow'
+        ]
+        
+        # Check if it's a known domain
+        for popular in popular_domains:
+            if popular in domain.lower():
+                return -1  # Indexed (legitimate)
+        
+        # Check domain age - if older than 1 year, more likely indexed
+        try:
+            w = whois.whois(domain)
+            if w.creation_date:
+                if isinstance(w.creation_date, list):
+                    creation_date = w.creation_date[0]
+                else:
+                    creation_date = w.creation_date
+                
+                # Calculate domain age in months
+                current_date = datetime.now()
+                age = (current_date.year - creation_date.year) * 12 + (current_date.month - creation_date.month)
+                
+                if age >= 12:
+                    return -1  # Likely indexed (legitimate)
+        except:
+            pass
+            
+        # Check for suspicious patterns
+        if any(x in url for x in ['login', 'password', 'secure', 'account']):
+            if any(x in url for x in ['.tk', '.ml', '.ga', '.cf', '.xyz']):
+                return 1  # Not indexed (suspicious)
+                
+        # If it has proper DNS records, it's more likely to be indexed
+        try:
+            dns.resolver.resolve(domain, 'A')
+            return -1  # Probably indexed (legitimate)
+        except:
+            return 1  # Not indexed (suspicious)
+    except:
+        return 1  # Default to suspicious
+
+def predict_url(url, model, feature_columns=None):
+    """
+    Predict if a URL is phishing or legitimate
+    
+    Args:
+        url: The URL to analyze
+        model: The trained machine learning model
+        feature_columns: Optional list of feature column names expected by the model
+                         If None, will use the features as extracted
+        
+    Returns:
+        Dictionary with prediction result and URL
+    """
+    # Extract features from URL
+    features = extract_features(url)
+    
+    # Convert extracted features to DataFrame
+    features_df = pd.DataFrame([features])
+    
+    if feature_columns is not None:
+        # Make sure all expected columns exist (fill missing with 0)
+        for col in feature_columns:
+            if col not in features_df.columns:
+                features_df[col] = 0
+                
+        # Use only the columns expected by the model
+        features_df = features_df[feature_columns]
+    
+    # Make prediction
+    prediction = model.predict(features_df)[0]
+    result = "Phishing" if prediction == 1 else "Legitimate"
+    
+    return {
+        "url": url,
+        "prediction": result,
+        "raw_prediction": prediction
+    }
