@@ -111,17 +111,35 @@ def predict_phishing(url):
         # Extract features
         url_features = extract_url_features(url)
         
-        # Ensure features match the training data
+        # Create DataFrame with proper feature names
         features_df = pd.DataFrame([url_features])
-        features_df = features_df[feature_names]  # Reorder columns to match training data
         
-        # Apply preprocessing
-        features_imputed = imputer.transform(features_df)
-        features_scaled = scaler.transform(features_imputed)
+        # Ensure all required features are present and in correct order
+        missing_features = set(feature_names) - set(features_df.columns)
+        for feature in missing_features:
+            features_df[feature] = 0
         
-        # Make prediction
-        prediction = model.predict(features_scaled)[0]
-        confidence = model.predict_proba(features_scaled)[0].max()
+        # Reorder columns to match training data
+        features_df = features_df[feature_names]
+        
+        # Apply preprocessing while maintaining feature names
+        features_imputed = pd.DataFrame(
+            imputer.transform(features_df),
+            columns=feature_names
+        )
+        
+        features_scaled = pd.DataFrame(
+            scaler.transform(features_imputed),
+            columns=feature_names
+        )
+        
+        # Get prediction probabilities
+        probs = model.predict_proba(features_scaled)[0]
+        phishing_prob = probs[0]  # Probability of being phishing (class 0)
+        
+        # Use a threshold of 0.7 for higher precision on phishing detection
+        prediction = 0 if phishing_prob > 0.7 else 1
+        confidence = max(phishing_prob, 1 - phishing_prob)
         
         return {
             'prediction': int(prediction),
