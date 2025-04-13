@@ -74,43 +74,67 @@ def main():
     model = load_model()
     feature_columns = get_feature_columns(model)
     
-    # Define test URLs - a mix of legitimate and potentially phishing sites
-    # Note: All URLs should be valid at the time of script execution
+    # Define challenging legitimate URLs
+    # These URLs have characteristics that might trigger false positives
     legitimate_urls = [
-        "https://www.google.com",
-        "https://www.apple.com",
-        "https://www.microsoft.com",
-        "https://www.amazon.com",
-        "https://github.com",
-        "https://www.nytimes.com",
-        "https://www.cnn.com",
-        "https://stackoverflow.com",
-        "https://www.wikipedia.org",
-        "https://www.wikipedia.org",
-        "https://www.reddit.com"
+        "https://login.microsoftonline.com/common/oauth2/authorize?client_id=29d9ed98-a469-4536-ade2-f981bc1d605e",  # Long URL with parameters
+        "https://accounts.google.com/o/oauth2/auth/identifier?client_id=717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com",  # Long auth URL
+        "https://secure2.store.apple.com/shop/signIn/orders?r=SCDHYHP7CY4H9KXEX",  # Secure subdomain with number
+        "https://github.com/login?return_to=%2Fjoin%3Fsource%3Dheader-home",  # URL with encoded parameters
+        "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com",  # Complex auth URL
+        "https://www.paypal.com/signin?returnUri=https%3A%2F%2Fwww.paypal.com%2Fmyaccount%2Ftransfer",  # Auth URL with returnUri
+        "https://www.bankofamerica.com/online-banking/sign-in/",  # Banking URL with dashes
+        "https://account.t-mobile.com/oauth2/v1/auth/login-password",  # Mobile provider with version in URL
+        "https://appleid.apple.com/auth/oauth2/authorize?client_id=com.apple.gs.xcode.auth",  # Apple ID auth URL
+        "https://login.yahoo.com/?.src=ym&.intl=us&.lang=en-US&.done=https%3A%2F%2Fmail.yahoo.com"  # Yahoo login with multiple parameters
     ]
     
-    # These are example URLs that have characteristics common in phishing sites
-    # Note: Some of these are constructed examples and may not be actual phishing sites
+    # Challenging phishing URLs - these are more sophisticated examples
+    # These are constructed examples and should not be real phishing sites
     suspicious_urls = [
-        "http://192.168.1.1/login.php",  # IP instead of domain
-        "http://bit.ly/3xR5tY",  # URL shortener
-        "https://secure-banking.com-user-session.info",  # Domain spoofing
-        "http://paypal.com@secure-account-login.com",  # @ symbol in URL
-        "https://banking.secure.com//redirect",  # Double slash redirect
-        "https://secure-bank-verification-center.com",  # Long URL with dashes
-        "https://login.secure.banking.com.verify.net",  # Multiple subdomains
-        "https://banking-secure-https.com",  # HTTPS in domain name
-        "http://0x58.0xCC.0xCA.0x62/secure",  # Hexadecimal IP
-        "http://secure.bank.com.phishing.xyz/login"  # Multi-level domain
+        "https://login-microsoft365.com/signin",  # Convincing domain with dash
+        "https://accounts-google.com/signin/v2/challenge/pwd",  # Convincing domain with legitimate-looking path
+        "https://appleid-verify.com/manage/overview",  # Brand + action word domain
+        "https://www.paypaI.com/us/signin",  # Homograph attack (capital I instead of l)
+        "https://amazonprime.delivery/tracking/order",  # Brand + related word domain
+        "https://secure-bankofamerica.com/login.php",  # Secure prefix with brand
+        "https://www.dropbox.security-check.com/verify",  # Subdomain using brand name
+        "https://netflix-account-services.com/renew-membership",  # Service-related domain
+        "https://online.banking-wells-fargo.com/auth",  # Legitimate-looking banking URL
+        "https://www.linkedin.com.profile-view.xyz/",  # Path after TLD
+        "https://facebook-login-secure.herokuapp.com/",  # Popular hosting service
+        "https://instagram-verify.onrender.com/confirm-identity",  # Cloud platform with brand
+        "https://confirm-chase-account.vercel.app/",  # Modern hosting platform
+        "https://www.docusign.com.document-verify.site/signing"  # Brand with action words
     ]
+    
+    # For advanced testing - URLs with mixed signals
+    edge_case_urls = [
+        # Legitimate but suspicious-looking URLs
+        "https://sandbox.paypal.com/webapps/auth/login",  # Testing subdomain of legitimate site
+        "https://test-payment.adyen.com/hpp/pay.shtml",  # Payment processor test environment
+        "https://demo.stripe.com/v3/elements?login=true",  # Payment demo site
+        "https://developer-account.intel.com/dashboard/2FA",  # Developer portal with number
+        "https://login.salesforce.com/secur/forgotpassword.jsp",  # Enterprise login with JSP
+        
+        # Phishing but with sophisticated techniques
+        "https://review-account-security.com/microsoft/sso",  # Generic domain with brand in path
+        "https://credential-verification.com/google/signin",  # Generic domain with recognizable path
+        "https://drive-google.share-document.com/view",  # Convincing domain combination
+        "https://secure.banking-updates.com/chase/login",  # Security words with brand in path
+        "https://mail.google.com.mailbox-verify.site/signin"  # Full domain prefix of legitimate site
+    ]
+    
+    # Combine edge cases with main test sets for comprehensive testing
+    legitimate_urls.extend([url for url in edge_case_urls[:5]])  # First 5 are legitimate
+    suspicious_urls.extend([url for url in edge_case_urls[5:]])  # Rest are phishing
     
     results = []
     true_labels = []
     predicted_labels = []
     
     # Test legitimate URLs
-    print("\nTesting legitimate URLs...")
+    print("\nTesting challenging legitimate URLs...")
     for url in legitimate_urls:
         try:
             start_time = time.time()
@@ -134,7 +158,7 @@ def main():
             print(f"✗ Error with {url}: {e}")
     
     # Test suspicious URLs
-    print("\nTesting suspicious URLs...")
+    print("\nTesting sophisticated phishing URLs...")
     for url in suspicious_urls:
         try:
             start_time = time.time()
