@@ -1,0 +1,463 @@
+=== PHISHING DETECTION RESULTS ===
+
+=== LEGITIMATE URLS ===
+
+URL: https://www.google.com
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 22
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 14
+
+URL: https://www.amazon.com
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 22
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 14
+
+URL: https://www.microsoft.com
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 25
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 17
+
+URL: https://www.nytimes.com/section/politics
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 40
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 15
+
+URL: https://www.bbc.co.uk/news/world
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 32
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 3
+  num_dashes: 0
+  domain_length: 13
+
+URL: https://edition.cnn.com/travel
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 30
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 15
+
+URL: https://www.github.com/features
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 31
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 14
+
+URL: https://stackoverflow.com/questions/tagged/python
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 49
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 0
+  domain_length: 17
+
+URL: https://developer.mozilla.org/en-US/docs/Web
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 44
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 1
+  domain_length: 21
+
+URL: https://www.wikipedia.org/wiki/Machine_learning
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 47
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 17
+
+URL: https://www.khanacademy.org/math
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 32
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 19
+
+URL: https://www.coursera.org/courses?query=data%20science
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 53
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 16
+
+URL: https://www.netflix.com/browse/genre/83
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 39
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 15
+
+URL: https://www.youtube.com/feed/trending
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 37
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 15
+
+URL: https://open.spotify.com/genre/podcasts-web
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 43
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 1
+  domain_length: 16
+
+URL: https://www.ebay.com/b/Electronics/bn_7000259124
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 48
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 12
+
+URL: https://www.etsy.com/c/jewelry-and-accessories?ref=catnav-10855
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 63
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 3
+  domain_length: 12
+
+URL: https://www.facebook.com/groups/
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 32
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 16
+
+URL: https://twitter.com/explore
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 27
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 0
+  domain_length: 11
+
+URL: https://www.linkedin.com/jobs/
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 30
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 16
+
+
+=== PHISHING URLS ===
+
+URL: https://g00gle-acc0unt-verify.netlify.app
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 41
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 1
+  num_dots: 2
+  num_dashes: 2
+  domain_length: 33
+
+URL: https://appleid.apple.com.signin-verify.info
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 44
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 4
+  num_dashes: 1
+  domain_length: 36
+
+URL: https://amazon-verification.com/signin
+Prediction: PHISHING with 95.41% confidence
+Key features:
+  url_length: 38
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 1
+  domain_length: 23
+
+URL: https://login.microsoft.com.security-check.malicious-site.com/
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 62
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 5
+  num_dashes: 2
+  domain_length: 53
+
+URL: https://secure-paypal.com.restoreaccount.info/login.php
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 55
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 4
+  num_dashes: 1
+  domain_length: 37
+
+URL: https://accounts.google.com.password-reset.suspiciousdomain.co/verify
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 69
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 5
+  num_dashes: 1
+  domain_length: 54
+
+URL: https://www.arnazon.com/order/confirmation
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 42
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 15
+
+URL: https://www.paypa1.com/account/security
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 39
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 1
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 14
+
+URL: https://www.g00gle.com/mail/secure
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 34
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 1
+  num_dots: 2
+  num_dashes: 0
+  domain_length: 14
+
+URL: https://bit.ly/3xR5tY7
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 22
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 0
+  domain_length: 6
+
+URL: https://tinyurl.com/nhf5d2zx
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 28
+  has_suspicious_word: 0
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 0
+  domain_length: 11
+
+URL: https://secure.bankofamerica.com.logon.sicherheit-update.com/login?session=expired&redirect=true
+Prediction: PHISHING with 99.91% confidence
+Key features:
+  url_length: 96
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 5
+  num_dashes: 1
+  domain_length: 52
+
+URL: https://www.dropbox.com.file.share.stsystems.ca/document/invoice?id=12345&auth=true
+Prediction: PHISHING with 99.96% confidence
+Key features:
+  url_length: 83
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 6
+  num_dashes: 0
+  domain_length: 39
+
+URL: https://www.facebook-security-login.com/checkpoint/
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 51
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 2
+  num_dashes: 2
+  domain_length: 31
+
+URL: https://netflix-updatepayment.com/billing/update?region=us
+Prediction: PHISHING with 99.97% confidence
+Key features:
+  url_length: 58
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 1
+  domain_length: 25
+
+URL: https://accounts.google.com.security.login.auth.serv07.cf/
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 58
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 7
+  num_dashes: 0
+  domain_length: 49
+
+URL: https://auth.login.secure.myaccount.apple.com.id-apple.net/verify
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 65
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 7
+  num_dashes: 1
+  domain_length: 50
+
+URL: https://amazon-orders.xyz/track-package
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 39
+  has_suspicious_word: 0
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 2
+  domain_length: 17
+
+URL: https://microsoft-365-update.tk/admin
+Prediction: PHISHING with 100.00% confidence
+Key features:
+  url_length: 37
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 1
+  num_dashes: 2
+  domain_length: 23
+
+URL: http://192.168.12.34/paypal/login
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 33
+  has_suspicious_word: 1
+  has_brand: 1
+  has_digit_substitution: 0
+  num_dots: 3
+  num_dashes: 0
+  domain_length: 13
+
+URL: https://137.44.12.89/banking/auth
+Prediction: LEGITIMATE with 100.00% confidence
+Key features:
+  url_length: 33
+  has_suspicious_word: 1
+  has_brand: 0
+  has_digit_substitution: 0
+  num_dots: 3
+  num_dashes: 0
+  domain_length: 12
+
+
+=== RESULTS SUMMARY ===
+Legitimate URLs: 16/20 correct (80.00%)
+Phishing URLs: 14/21 correct (66.67%)
+Overall accuracy: 30/41 (73.17%)
