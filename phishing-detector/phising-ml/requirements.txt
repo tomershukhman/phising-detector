@@ -3,3 +3,4 @@ seaborn
 matplotlib
 kagglehub[pandas-datasets]
 kagglehub
+bs4
