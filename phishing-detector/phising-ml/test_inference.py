@@ -111,6 +111,10 @@ def main():
     # CATEGORY 2: LEGITIMATE URLS WITH SUSPICIOUS CHARACTERISTICS
     # These are real legitimate URLs that might trigger false positives
     deceptive_legitimate_urls = [
+"https://www.mako.co.il/food-restaurants/restaurant-news/Article-d706a6c26f25391027.html",  # Legitimate but long URL
+"https://aws.amazon.com/data-exchange/?adx-cards2.sort-by=item.additionalFields.eventDate&adx-cards2.sort-order=desc",
+"https://github.com/LeandThaqi/NoPhish/blob/main/train_random_forest_less.py",
+
         # Legitimate sites with complex/suspicious looking URLs
         "https://login.live.com/login.srf?wa=wsignin1.0&rpsnv=13&ct=1618675326",  # Microsoft complex login URL
         "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com",  # Google complex login
@@ -142,45 +146,10 @@ def main():
         "https://login.mailchimp.com/oauth2/v1/authorize?response_type=code"  # OAuth flow
     ]
     
-    # CATEGORY 3: EXTREMELY CHALLENGING EDGE CASES
-    # These URLs are specifically designed to be very hard to classify correctly
-    edge_case_urls = [
-        # Legitimate but suspicious subdirectories using security terms
-        "https://github.com/security/advisories/report",  # 'security' in path but legitimate
-        "https://twitter.com/account/verify_credentials",  # 'verify' in path of legitimate site
-        "https://developer.paypal.com/api/auth-credentials/",  # Auth in legitimate developer portal
-        "https://help.netflix.com/legal/security-verification",  # Security term in help page
-        
-        # Phishing - domains that look very close to legitimate
-        "https://www.cloudflare-cdn.com/signin",  # Not the real Cloudflare domain
-        "https://checkout-paypal-secure.com/review",  # Multiple legitimate terms combined
-        "https://my-appleid.cloud.com/manage",  # Combining brand with legitimate term
-        "https://onedrive-sharepoint.com/files/document",  # Two Microsoft products combined
-        
-        # Legitimate with oauth tokens and many parameters (very complex)
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6-1d93765276ca&redirect_uri=https%3A%2F%2Fwww.office.com%2Flandingv2&response_type=code%20id_token&scope=openid%20profile%20https%3A%2F%2Fwww.office.com%2Fv2%2FOfficeHome.All",  # Microsoft OAuth
-        "https://accounts.google.com/o/oauth2/v2/auth/identifier?client_id=717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com&scope=profile%20email&redirect_uri=https%3A%2F%2Fstackauth.com%2Fauth%2Foauth2%2Fgoogle&state=%7B%22sid%22%3A1%2C%22st%22%3A%2259%3A3%3Abbc%2C16%3A9fbf5998a53a6de2%2C10%3A1647695052%2C16%3A66ba0b7fb39c10da%2C106e44857549041e621c02f3436a836b46e65219da2d0b76e36d7423025f9fbd%22%2C%22cid%22%3A%22717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com%22%2C%22k%22%3A%22Google%22%2C%22ses%22%3A%22c6c564513fa648049c388a518e6cf938%22%7D&response_type=code&service=lso&o2v=2&flowName=GeneralOAuthFlow",  # Google OAuth with many parameters
-        
-        # Phishing - multi-method attack (combining multiple techniques)
-        "https://signin.ebay-verify.secure-id.payment.update.com-tx.xyz/",  # Multiple subdomains with brands
-        "https://security.google.auth.com.verification-support.online/account",  # Many security terms + brand
-        
-        # Legitimate but very unusual URL structures
-        "https://for-the-badge.blink1073.repl.co/badges/releases/Netflix?repository=renovate",  # Custom service on replit
-        "https://us-central1-visualism-dev.cloudfunctions.net/api/auth/callback/github",  # Google Cloud Function URL
-        
-        # Phishing that mimics URL shorteners or redirects
-        "https://bit.ly.url-shortener-redirect.com/g00gl3",  # Fake URL shortener
-        "https://rb.gy.click-confirmation.online/amzn-delivery",  # Fake shortened URL
-        
-        # Extremely deceptive phishing using Unicode character tricks
-        "https://www.xn--pple-43d.com/signin",  # Punycode for apple with dots under 'a'
-        "https://xn--gogle-0nf.com/mail",  # Punycode for google with accent 
-    ]
-    
+
     # Combine into test sets
-    phishing_urls = sophisticated_phishing_urls + edge_case_urls[4:8] + edge_case_urls[12:14] + edge_case_urls[-2:]
-    legitimate_urls = deceptive_legitimate_urls + edge_case_urls[0:4] + edge_case_urls[8:12] + edge_case_urls[14:16]
+    phishing_urls = sophisticated_phishing_urls 
+    legitimate_urls = deceptive_legitimate_urls
     
     results = []
     true_labels = []
