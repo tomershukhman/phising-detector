@@ -29,6 +29,14 @@ print(f"Feature names: {list(X.columns)}")
 print("\nTarget distribution:")
 print(y.value_counts())
 
+# Save the first 5 lines of the dataset to a CSV file
+print("\nSaving first 5 lines of the dataset to CSV file...")
+# Combine features and target for a complete dataset view
+full_dataset = X.copy()
+full_dataset['target'] = y
+full_dataset.head(5).to_csv('dataset_sample.csv', index=False)
+print("Sample dataset saved to 'dataset_sample.csv'")
+
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 

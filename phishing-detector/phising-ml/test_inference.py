@@ -7,8 +7,10 @@ to demonstrate its effectiveness in identifying phishing and legitimate websites
 
 import joblib
 import time
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from tabulate import tabulate
-from utils import predict_url
+from features_extraction import extract_features
 
 def load_model(model_path='phishing_detector_model.pkl'):
     """Load the trained phishing detector model"""
@@ -21,8 +23,47 @@ def get_feature_columns(model):
     # If not, we'll return None and handle it in the predict function
     try:
         return model.feature_names_in_
-    except:
+    except AttributeError:
         return None
+
+def predict_url(url, model, feature_columns=None):
+    """
+    Predict if a URL is phishing or legitimate
+    
+    Args:
+        url: The URL to analyze
+        model: The trained machine learning model
+        feature_columns: Optional list of feature column names expected by the model
+                         If None, will use the features as extracted
+        
+    Returns:
+        Dictionary with prediction result and URL
+    """
+    # Extract features from URL using the local extract_features function
+    features = extract_features(url)
+    
+    # Convert extracted features to DataFrame
+    import pandas as pd
+    features_df = pd.DataFrame([features])
+    
+    if feature_columns is not None:
+        # Make sure all expected columns exist (fill missing with 0)
+        for col in feature_columns:
+            if col not in features_df.columns:
+                features_df[col] = 0
+                
+        # Use only the columns expected by the model
+        features_df = features_df[feature_columns]
+    
+    # Make prediction
+    prediction = model.predict(features_df)[0]
+    result = "Phishing" if prediction == 1 else "Legitimate"
+    
+    return {
+        "url": url,
+        "prediction": result,
+        "raw_prediction": prediction
+    }
 
 def main():
     """Main function to run inference on a set of URLs"""
@@ -45,6 +86,7 @@ def main():
         "https://www.cnn.com",
         "https://stackoverflow.com",
         "https://www.wikipedia.org",
+        "https://www.wikipedia.org",
         "https://www.reddit.com"
     ]
     
@@ -64,6 +106,8 @@ def main():
     ]
     
     results = []
+    true_labels = []
+    predicted_labels = []
     
     # Test legitimate URLs
     print("\nTesting legitimate URLs...")
@@ -73,8 +117,14 @@ def main():
             result = predict_url(url, model, feature_columns)
             processing_time = time.time() - start_time
             
+            # Store the true label (legitimate = 0)
+            true_labels.append(0)
+            # Store the predicted label (Legitimate = 0, Phishing = 1)
+            predicted_labels.append(1 if result["prediction"] == "Phishing" else 0)
+            
             results.append({
                 "url": url,
+                "true_label": "Legitimate",
                 "prediction": result["prediction"],
                 "processing_time": processing_time
             })
@@ -91,8 +141,14 @@ def main():
             result = predict_url(url, model, feature_columns)
             processing_time = time.time() - start_time
             
+            # Store the true label (phishing = 1)
+            true_labels.append(1)
+            # Store the predicted label (Legitimate = 0, Phishing = 1)
+            predicted_labels.append(1 if result["prediction"] == "Phishing" else 0)
+            
             results.append({
                 "url": url,
+                "true_label": "Phishing",
                 "prediction": result["prediction"],
                 "processing_time": processing_time
             })
@@ -108,11 +164,12 @@ def main():
     for result in results:
         table_data.append([
             result["url"][:60] + "..." if len(result["url"]) > 60 else result["url"],
+            result["true_label"],
             result["prediction"],
             f"{result['processing_time']:.2f}s"
         ])
     
-    headers = ["URL", "Prediction", "Processing Time"]
+    headers = ["URL", "True Label", "Prediction", "Processing Time"]
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
     
     # Calculate statistics
@@ -125,6 +182,42 @@ def main():
     print(f"Predicted legitimate: {legitimate_count} ({legitimate_count/total_count*100:.1f}%)")
     print(f"Predicted phishing: {phishing_count} ({phishing_count/total_count*100:.1f}%)")
     print(f"Average processing time: {sum(r['processing_time'] for r in results)/total_count:.2f}s")
+    
+    # Create and display confusion matrix
+    labels = ["Legitimate", "Phishing"]
+    cm = confusion_matrix(true_labels, predicted_labels)
+    
+    print("\nConfusion Matrix:")
+    print("True \\ Predicted |  Legitimate  |  Phishing  ")
+    print("-"*45)
+    print(f"Legitimate      |      {cm[0][0]}        |     {cm[0][1]}     ")
+    print(f"Phishing        |      {cm[1][0]}        |     {cm[1][1]}     ")
+    
+    # Visualize the confusion matrix
+    fig, ax = plt.subplots(figsize=(8, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    disp.plot(cmap=plt.cm.Blues, ax=ax)
+    plt.title("Phishing Detection Confusion Matrix")
+    plt.tight_layout()
+    plt.savefig("confusion_matrix.png")
+    print("\nConfusion matrix visualization saved as 'confusion_matrix.png'")
+    
+    # Calculate additional metrics
+    true_positives = cm[1][1]   # Correctly identified phishing
+    true_negatives = cm[0][0]   # Correctly identified legitimate
+    false_positives = cm[0][1]  # Legitimate incorrectly classified as phishing
+    false_negatives = cm[1][0]  # Phishing incorrectly classified as legitimate
+    
+    accuracy = (true_positives + true_negatives) / total_count
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    print("\nPerformance Metrics:")
+    print(f"Accuracy:  {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1_score:.4f}")
 
 if __name__ == "__main__":
     main()
