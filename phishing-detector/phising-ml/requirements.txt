@@ -1,5 +1,8 @@
-scikit-learn 
-seaborn
-matplotlib
-kagglehub[pandas-datasets]
-kagglehub
+scikit-learn>=1.0.2
+numpy>=1.21.0
+pandas>=1.3.0
+requests>=2.26.0
+beautifulsoup4>=4.9.3
+joblib>=1.1.0
+tldextract>=3.1.0
+kagglehub>=0.1.0
