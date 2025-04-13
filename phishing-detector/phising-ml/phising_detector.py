@@ -78,17 +78,35 @@ X_test_scaled_df = pd.DataFrame(X_test_scaled, columns=feature_names_list)
 # 5. Model Training
 print("\n--- Training Model ---")
 rf_clf = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    min_samples_split=10,
-    min_samples_leaf=5,
-    class_weight='balanced',
+    n_estimators=200,  # Increased number of trees
+    max_depth=15,      # Slightly deeper trees
+    min_samples_split=5,
+    min_samples_leaf=3,
+    class_weight='balanced_subsample',  # Changed to balanced_subsample for better handling
     random_state=42,
     n_jobs=-1
 )
 
 rf_clf.fit(X_train_scaled_df, y_train)
-print("Random Forest training complete.")
+
+# After training, get feature importances and adjust prediction threshold
+importances = rf_clf.feature_importances_
+feature_importance_df = pd.DataFrame({
+    'Feature': feature_names_list,
+    'Importance': importances
+})
+feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
+print("\nTop 15 Most Important Features:")
+print(feature_importance_df.head(15))
+
+# Calibrate prediction threshold on validation set
+val_probs = rf_clf.predict_proba(X_test_scaled_df)
+optimal_threshold = 0.6  # Start with a higher threshold to reduce false positives
+y_pred_rf = (val_probs[:, 1] >= optimal_threshold).astype(int)
+
+print("\nModel Evaluation with Adjusted Threshold:")
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred_rf))
+print("\nClassification Report:\n", classification_report(y_test, y_pred_rf, target_names=['Legitimate (0)', 'Phishing (1)']))
 
 # 6. Evaluation
 print("\n--- Model Evaluation ---")
