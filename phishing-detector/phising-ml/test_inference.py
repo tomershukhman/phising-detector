@@ -74,82 +74,24 @@ def main():
     model = load_model()
     feature_columns = get_feature_columns(model)
     
-    # CATEGORY 1: EXTREMELY DECEPTIVE PHISHING URLS
-    # These are sophisticated phishing attempts using various advanced techniques
-    sophisticated_phishing_urls = [
-        # Typosquatting (character replacement/homograph)
-        "https://www.аррӏе.com/icloud/login",  # Cyrillic 'а' and 'р' characters look like Latin 'a' and 'p'
-        "https://www.faceboоk.com/login.php",  # Latin 'о' vs Cyrillic 'о'
-        "https://www.microsоft.com/en-us/security",  # Another homograph attack with Cyrillic 'о'
-        "https://www.amаzon.com/verify/account",  # Cyrillic 'а' instead of Latin 'a'
-        
-        # Subdomain manipulation
-        "https://login.microsoft.com.security-check-required.com/auth",  # Full domain as subdomain
-        "https://accounts-google.com.verification.biz/signin",  # Domain + subdomain tricks
-        "https://bankofamerica.com.secure-banking.us/login",  # Using target domain as subdomain
-        "https://www.paypal.com.account-security.app/",  # Modern TLD (.app) with legit domain as subdomain
-        
-        # Domain variations with security terms
-        "https://secure-wells-fargo-bank.com/auth",  # Security words + brand
-        "https://login-chase-secure-bank.com/verify",  # Multiple security terms
-        "https://verified-appleid.cloud/manage",  # Security word with cloud TLD
-        "https://authverify-amazon.co/review",  # Action verbs combined
-        
-        # Path manipulation (legitimate domain in path)
-        "https://security-alert.com/microsoft.com/account/verify",  # Legitimate domain in path
-        "https://verification-center.net/chase.com/statement",  # Banking domain in path
-        "https://account-update.org/paypal.com/login",  # Payment provider in path
-        "https://confirm-activity.site/instagram/unusual-login",  # Social media + action
-        
-        # Modern hosting platforms (harder to detect)
-        "https://netflix-account-update.netlify.app/",  # Netlify (static hosting)
-        "https://amazon-delivery-tracking.vercel.app/",  # Vercel (modern hosting)
-        "https://apple-id-validate.web.app/",  # Firebase hosting
-        "https://docusign-document-p346.onrender.com/",  # Render (cloud platform)
+    # URLs for testing
+    legit_urls = [
+        "https://www.aiismath.com/",
+        "https://www.youtube.com/playlist?list=PLmWq-5VQxdn533RW5XgpCvLadG-qzMMvI",
+        "https://www.visidata.org/credits/",
+        "https://phishtank.org/"
+    ]
+
+    phishing_urls = [
+        "https://sudden-hazel-alligator.glitch.me/",
+        "https://quirky-nebula-almandine.glitch.me/",
+        "https://www.filmreviewers.com/",
+        "https://youremotejobs.com/",
+        "http://amazon-first-project.vercel.app/"
     ]
     
-    # CATEGORY 2: LEGITIMATE URLS WITH SUSPICIOUS CHARACTERISTICS
-    # These are real legitimate URLs that might trigger false positives
-    deceptive_legitimate_urls = [
-"https://www.mako.co.il/food-restaurants/restaurant-news/Article-d706a6c26f25391027.html",  # Legitimate but long URL
-"https://aws.amazon.com/data-exchange/?adx-cards2.sort-by=item.additionalFields.eventDate&adx-cards2.sort-order=desc",
-"https://github.com/LeandThaqi/NoPhish/blob/main/train_random_forest_less.py",
-
-        # Legitimate sites with complex/suspicious looking URLs
-        "https://login.live.com/login.srf?wa=wsignin1.0&rpsnv=13&ct=1618675326",  # Microsoft complex login URL
-        "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com",  # Google complex login
-        "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.identity=http%3A%2F%2Fspecs.openid.net",  # Amazon OAuth
-        "https://auth0.openai.com/u/login/identifier?state=hKFo2SBMVkR5b19yREIweHB",  # Auth0 login URL
-        
-        # Legitimate but with security/verification terms
-        "https://secure.checkout.visa.com/checkout-widget/assets/img/src",  # 'secure' in legitimate domain
-        "https://verify.twilio.com/v2/phone-numbers/verification/start",  # 'verify' in legitimate domain
-        "https://id-verification.amazonaws.com/session",  # 'verification' in AWS subdomain
-        "https://authentication.td.com/uap-ui/?consumer=easyweb",  # 'authentication' in bank domain
-        
-        # Legitimate but with uncommon TLDs or structures
-        "https://auth.tesla.cn/oauth2/v3/authorize",  # Less common TLD (.cn)
-        "https://signin.aws.amazon.com/oauth",  # Multiple subdomains for service
-        "https://security-center.nasdaq.com/account/login",  # 'security' term in legitimate subdomain
-        "https://www.instagram-engineering.com/blog",  # Legitimate brand + hyphen (official engineering blog)
-        
-        # Legitimate sandbox/development environments
-        "https://test-sandbox.adyen.com/ca/ca.shtml",  # Payment processor test environment
-        "https://developer-admin.sandbox.checkout.com/login",  # Dev sandbox with 'admin'
-        "https://test.authorize.net/sandbox/account",  # Testing environment
-        "https://sandbox.payfast.dev/engine/process",  # Payment sandbox environment
-        
-        # Legitimate but with URL structure similar to phishing
-        "https://demo.stripe.com/account/login?redirect=%2Fdashboard",  # Demo site with redirect parameter
-        "https://classroom.github.com/auth/github?auth_type=student",  # GitHub classroom auth
-        "https://www.office.com/login?es=Click&ru=%2Fsetup",  # Microsoft Office login with parameters
-        "https://login.mailchimp.com/oauth2/v1/authorize?response_type=code"  # OAuth flow
-    ]
-    
-
     # Combine into test sets
-    phishing_urls = sophisticated_phishing_urls 
-    legitimate_urls = deceptive_legitimate_urls
+    legitimate_urls = legit_urls
     
     results = []
     true_labels = []
