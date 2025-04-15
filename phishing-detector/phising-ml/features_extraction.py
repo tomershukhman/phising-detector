@@ -245,18 +245,56 @@ def having_sub_domain(url):
 
 
 def domain_registration_length(domain):
-    expiration_date = domain.expiration_date
-    today = time.strftime('%Y-%m-%d')
-    today = datetime.strptime(today, '%Y-%m-%d')
-
-    registration_length = 0
-    # Disa domains nuk kane expiration date
-    if expiration_date:
+    """
+    Check domain registration length
+    Returns:
+      1 if domain registration length > 1 year (legitimate)
+     -1 if domain registration length <= 1 year (suspicious/phishing)
+    Handles all edge cases without crashing
+    """
+    try:
+        # Get today's date for comparison
+        today = datetime.now()
+        
+        # Handle case where expiration_date is None or N/A
+        if not domain.expiration_date:
+            return -1
+        
+        # Handle case where expiration_date is a list
+        expiration_date = domain.expiration_date
         if isinstance(expiration_date, list):
-            registration_length = abs((expiration_date[0] - today).days)
-        else:
-            registration_length = abs((expiration_date - today).days)
-    return -1 if registration_length / 365 <= 1 else 1
+            if not expiration_date:  # Empty list
+                return -1
+            expiration_date = expiration_date[0]
+        
+        # Handle different string formats or None value
+        if isinstance(expiration_date, str):
+            try:
+                # Try to parse common date formats
+                for fmt in ['%Y-%m-%d', '%d-%m-%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y/%m/%d', '%d/%m/%Y']:
+                    try:
+                        expiration_date = datetime.strptime(expiration_date, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:  # If no format matched
+                    return -1
+            except Exception:
+                return -1
+        
+        # If expiration_date is still not a datetime object after all attempts
+        if not isinstance(expiration_date, datetime):
+            return -1
+            
+        # Calculate registration length in days
+        registration_length = (expiration_date - today).days
+        
+        # Return appropriate value based on registration length
+        return 1 if registration_length > 365 else -1
+        
+    except Exception as e:
+        print(f"Error in domain_registration_length: {e}")
+        return -1  # Default to suspicious if any error occurs
 
 
 def favicon(url, soup, domain):
@@ -426,18 +464,102 @@ def i_frame(soup):
 
 
 def age_of_domain(domain):
-    if isinstance(domain.creation_date,list):
-        creation_date = domain.creation_date[0]
-    else:
+    """
+    Check age of domain
+    Returns:
+      1 if domain age > 6 months (legitimate)
+     -1 if domain age <= 6 months or can't be determined (suspicious/phishing)
+    Handles all edge cases without crashing
+    """
+    try:
+        # Handle case where creation_date is None or N/A
+        if not domain.creation_date:
+            return -1
+            
+        # Handle case where creation_date is a list
         creation_date = domain.creation_date
-    if isinstance(domain.expiration_date,list):
-        expiration_date = domain.expiration_date[0]
-    else:
+        if isinstance(creation_date, list):
+            if not creation_date:  # Empty list
+                return -1
+            creation_date = creation_date[0]
+            
+        # Handle different string formats or None value for creation_date
+        if isinstance(creation_date, str):
+            try:
+                # Try to parse common date formats
+                for fmt in ['%Y-%m-%d', '%d-%m-%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y/%m/%d', '%d/%m/%Y']:
+                    try:
+                        creation_date = datetime.strptime(creation_date, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:  # If no format matched
+                    return -1
+            except Exception:
+                return -1
+                
+        # If creation_date is still not a datetime object after all attempts
+        if not isinstance(creation_date, datetime):
+            return -1
+            
+        # Handle case where expiration_date is None or N/A
+        if not domain.expiration_date:
+            # If we have creation date but no expiration, calculate age from now
+            today = datetime.now()
+            age_days = (today - creation_date).days
+            return 1 if age_days > 180 else -1
+            
+        # Handle case where expiration_date is a list
         expiration_date = domain.expiration_date
-    ageofdomain = 0
-    if expiration_date:
-        ageofdomain = abs((expiration_date - creation_date).days)
-    return -1 if ageofdomain / 30 < 6 else 1
+        if isinstance(expiration_date, list):
+            if not expiration_date:  # Empty list
+                # Calculate age from now
+                today = datetime.now()
+                age_days = (today - creation_date).days
+                return 1 if age_days > 180 else -1
+            expiration_date = expiration_date[0]
+            
+        # Handle different string formats for expiration_date
+        if isinstance(expiration_date, str):
+            try:
+                # Try to parse common date formats
+                for fmt in ['%Y-%m-%d', '%d-%m-%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y/%m/%d', '%d/%m/%Y']:
+                    try:
+                        expiration_date = datetime.strptime(expiration_date, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:  # If no format matched
+                    # Calculate age from now
+                    today = datetime.now()
+                    age_days = (today - creation_date).days
+                    return 1 if age_days > 180 else -1
+            except Exception:
+                # Calculate age from now
+                today = datetime.now()
+                age_days = (today - creation_date).days
+                return 1 if age_days > 180 else -1
+                
+        # If expiration_date is still not a datetime object
+        if not isinstance(expiration_date, datetime):
+            # Calculate age from now
+            today = datetime.now()
+            age_days = (today - creation_date).days
+            return 1 if age_days > 180 else -1
+
+        # Calculate domain age based on creation and expiration dates
+        try:
+            age_days = (expiration_date - creation_date).days / 2  # Rough estimate of age as half of registration period
+        except Exception:
+            # Fallback to current date if calculation fails
+            today = datetime.now()
+            age_days = (today - creation_date).days
+            
+        return 1 if age_days > 180 else -1  # 180 days = ~6 months
+        
+    except Exception as e:
+        print(f"Error in age_of_domain: {e}")
+        return -1  # Default to suspicious if any error occurs
 
 
 def web_traffic(url):
