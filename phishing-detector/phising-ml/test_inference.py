@@ -191,18 +191,18 @@ def main():
     print(f"Average processing time: {sum(r['processing_time'] for r in results)/total_count:.2f}s")
     
     # Create and display confusion matrix
-    labels = ["Phishing", "Legitimate"]
+    labels = ["Legitimate", "Phishing"]
     # Convert prediction values to indices for confusion matrix
-    # Map -1 to 0 index, and 1 to 1 index
-    true_indices = [(val + 1) // 2 for val in true_labels]
-    pred_indices = [(val + 1) // 2 for val in predicted_labels]
+    # Map 1 to 0 index, and -1 to 1 index
+    true_indices = [(1 - val) // 2 for val in true_labels]
+    pred_indices = [(1 - val) // 2 for val in predicted_labels]
     cm = confusion_matrix(true_indices, pred_indices)
     
     print("\nConfusion Matrix:")
-    print("True \\ Predicted |  Phishing  |  Legitimate  ")
+    print("True \\ Predicted |  Legitimate  |  Phishing  ")
     print("-"*45)
-    print(f"Phishing        |     {cm[0][0]}      |     {cm[0][1]}     ")
-    print(f"Legitimate      |     {cm[1][0]}      |     {cm[1][1]}     ")
+    print(f"Legitimate      |      {cm[0][0]}       |     {cm[0][1]}     ")
+    print(f"Phishing        |      {cm[1][0]}       |     {cm[1][1]}     ")
     
     # Visualize the confusion matrix
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -213,11 +213,11 @@ def main():
     plt.savefig("confusion_matrix.png")
     print("\nConfusion matrix visualization saved as 'confusion_matrix.png'")
     
-    # Calculate additional metrics - adjusting indices for our mapping
-    true_positives = cm[0][0]   # Correctly identified phishing
-    true_negatives = cm[1][1]   # Correctly identified legitimate
-    false_positives = cm[1][0]  # Legitimate incorrectly classified as phishing
-    false_negatives = cm[0][1]  # Phishing incorrectly classified as legitimate
+    # Calculate additional metrics - adjusting indices for our flipped mapping
+    true_negatives = cm[0][0]   # Correctly identified legitimate
+    false_negatives = cm[0][1]  # Legitimate incorrectly classified as phishing
+    false_positives = cm[1][0]  # Phishing incorrectly classified as legitimate
+    true_positives = cm[1][1]   # Correctly identified phishing
     
     accuracy = (true_positives + true_negatives) / total_count
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
