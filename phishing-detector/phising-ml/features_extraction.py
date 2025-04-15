@@ -67,12 +67,15 @@ def extract_features(url):
                 response = requests.get(url, timeout=10, verify=True)
                 features['sslfinal_state'] = -1  # Legitimate
             except requests.exceptions.SSLError:
+                print(f"Exception SSL error in extract_feature is: {e}")
                 features['sslfinal_state'] = 1  # Phishing (SSL error)
             except (requests.exceptions.RequestException, Exception) as e:
+                print(f"Exception request exception in extract_feature is: {e}")
                 features['sslfinal_state'] = 0  # Suspicious - request failed
         else:
             features['sslfinal_state'] = 1  # Phishing (no HTTPS)
     except Exception:
+        print(f"Exception other in extract_feature is: {e}")
         features['sslfinal_state'] = 1  # Default to phishing
     
     # Domain features
@@ -100,6 +103,7 @@ def extract_features(url):
         
     except requests.exceptions.RequestException as e:
         # If can't fetch the page due to request error, set features to suspicious
+        print(f"Exception request exception html/DOM in extract_feature is: {e}")
         features['favicon'] = 1
         features['https_token'] = 1 
         features['request_url'] = 1
@@ -111,6 +115,7 @@ def extract_features(url):
         features['iframe'] = 1
     except Exception as e:
         # For any other error, default to suspicious
+        print(f"Exception other html/DOM in extract_feature is: {e}")
         features['favicon'] = 1
         features['https_token'] = 1 
         features['request_url'] = 1
@@ -284,8 +289,10 @@ def request_url(wiki, soup, domain):
     try:
         percentage = success / float(i) * 100
     except ZeroDivisionError:
+        print("ZeroDivisionError in request_url")
         return 1
     except Exception:
+        print("Exception in request_url")
         return 0  # Default to suspicious for other errors
 
     if percentage < 22.0:
@@ -309,8 +316,10 @@ def url_of_anchor(wiki, soup, domain):
     try:
         percentage = unsafe / float(i) * 100
     except ZeroDivisionError:
+        print("ZeroDivisionError in url_of_anchor")
         return 1  # No anchor tags - likely legitimate
     except Exception:
+        print("Exception in url_of_anchor")
         return 0  # Other errors - suspicious
         
     if percentage < 31.0:
@@ -339,8 +348,10 @@ def links_in_tags(wiki, soup, domain):
     try:
         percentage = success / float(i) * 100
     except ZeroDivisionError:
+        print("ZeroDivisionError in links_in_tags")
         return 1  # No tags with links - likely legitimate
     except Exception:
+        print("Exception in links_in_tags")
         return 0  # Other errors - suspicious
 
     if percentage < 17.0:
@@ -458,10 +469,12 @@ def google_index(url):
 def statistical_report(url, hostname):
     try:
         ip_address = socket.gethostbyname(hostname)
-    except socket.gaierror:
+    except socket.gaierror as e:
+        print(f"Socket gaierror in statistical_report: {e}")
         # Hostname couldn't be resolved
         return -1
-    except Exception:
+    except Exception as e:
+        print(f"Exception in statistical_report {e}")
         # Any other exception
         return 0
         
@@ -493,10 +506,12 @@ def get_domain_from_hostname(hostname):
     try:
         domain = whois.whois(hostname)
         return domain
-    except whois.parser.PywhoisError:
+    except whois.parser.PywhoisError as e:
+        print(f"PywhoisError in get_domain_from_hostname: {e}")
         # Domain doesn't exist
         return -1
-    except Exception:
+    except Exception as e:
+        print(f"Exception in get_domain_from_hostname: {e}")
         # Any other exception
         return -1
 
