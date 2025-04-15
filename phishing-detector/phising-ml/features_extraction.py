@@ -8,7 +8,7 @@ import urllib.request
 import bs4
 import re
 import socket
-import whois
+import whois  # This might be either python-whois or another whois module
 from datetime import datetime
 import time
 from googlesearch import search
@@ -16,6 +16,30 @@ import pandas as pd
 import requests
 from urllib.parse import urlparse
 import os
+
+# Check which whois module we have and set up the appropriate function
+try:
+    # Test if we have python-whois with whois() function
+    test_whois = whois.whois("google.com")
+    def perform_whois(hostname):
+        return whois.whois(hostname)
+except AttributeError:
+    # If attribute error, we might have the whois module without the whois function
+    # Try to use it directly as a callable
+    try:
+        test_whois = whois("google.com")
+        def perform_whois(hostname):
+            return whois(hostname)
+    except Exception:
+        # If that fails too, create a stub function that always returns -1
+        print("Warning: No functional whois module found. Domain checks will be limited.")
+        def perform_whois(hostname):
+            return -1
+except Exception as e:
+    print(f"Error initializing whois functionality: {e}")
+    # Create a stub function that always returns -1
+    def perform_whois(hostname):
+        return -1
 
 # This import is needed only when you run this file in isolation.
 import sys
@@ -66,7 +90,7 @@ def extract_features(url):
             try:
                 response = requests.get(url, timeout=10, verify=True)
                 features['sslfinal_state'] = -1  # Legitimate
-            except requests.exceptions.SSLError:
+            except requests.exceptions.SSLError as e:
                 print(f"Exception SSL error in extract_feature is: {e}")
                 features['sslfinal_state'] = 1  # Phishing (SSL error)
             except (requests.exceptions.RequestException, Exception) as e:
@@ -74,7 +98,7 @@ def extract_features(url):
                 features['sslfinal_state'] = 0  # Suspicious - request failed
         else:
             features['sslfinal_state'] = 1  # Phishing (no HTTPS)
-    except Exception:
+    except Exception as e:
         print(f"Exception other in extract_feature is: {e}")
         features['sslfinal_state'] = 1  # Default to phishing
     
@@ -504,15 +528,12 @@ def get_hostname_from_url(url):
 
 def get_domain_from_hostname(hostname):
     try:
-        domain = whois.whois(hostname)
+        domain = perform_whois(hostname)
         return domain
-    except whois.parser.PywhoisError as e:
-        print(f"PywhoisError in get_domain_from_hostname: {e}")
-        # Domain doesn't exist
-        return -1
     except Exception as e:
-        print(f"Exception in get_domain_from_hostname: {e}")
-        # Any other exception
+        # Handle any whois exceptions more generically
+        print(f"Whois error in get_domain_from_hostname: {e}")
+        # Domain doesn't exist or couldn't be processed
         return -1
 
 
