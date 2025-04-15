@@ -51,14 +51,6 @@ from patterns import *
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INNERHTML_PATH = os.path.join(CURRENT_DIR, "innerHTML.txt")
 
-# Map feature values correctly between implementations
-# In utils.py, 1 is phishing and -1 is legitimate
-# In features_extraction.py, 1 is legitimate and -1 is phishing
-# We're standardizing to the utils.py convention where:
-# 1 = phishing, 0 = suspicious, -1 = legitimate
-def map_feature_value(value):
-    return -value  # Reverse the values to match utils.py convention
-
 # Added function to extract features in dictionary format
 def extract_features(url):
     """
@@ -73,14 +65,14 @@ def extract_features(url):
     features = {}
     
     # URL-based features directly from existing functions
-    features['url_length'] = map_feature_value(url_length(url))
-    features['shortining_service'] = map_feature_value(shortening_service(url))
-    features['having_at_symbol'] = map_feature_value(having_at_symbol(url))
-    features['double_slash_redirecting'] = map_feature_value(double_slash_redirecting(url))
+    features['url_length'] = url_length(url)
+    features['shortining_service'] = shortening_service(url)
+    features['having_at_symbol'] = having_at_symbol(url)
+    features['double_slash_redirecting'] = double_slash_redirecting(url)
     
     hostname = get_hostname_from_url(url)
-    features['prefix_suffix'] = map_feature_value(prefix_suffix(hostname))
-    features['having_sub_domain'] = map_feature_value(having_sub_domain(url))
+    features['prefix_suffix'] = prefix_suffix(hostname)
+    features['having_sub_domain'] = having_sub_domain(url)
     
     # SSL features (new implementation)
     try:
@@ -89,77 +81,77 @@ def extract_features(url):
             # Check certificate by making a request
             try:
                 response = requests.get(url, timeout=10, verify=True)
-                features['sslfinal_state'] = -1  # Legitimate
+                features['sslfinal_state'] = 1  # Legitimate
             except requests.exceptions.SSLError as e:
                 print(f"Exception SSL error in extract_feature is: {e}")
-                features['sslfinal_state'] = 1  # Phishing (SSL error)
+                features['sslfinal_state'] = -1  # Phishing (SSL error)
             except (requests.exceptions.RequestException, Exception) as e:
                 print(f"Exception request exception in extract_feature is: {e}")
                 features['sslfinal_state'] = 0  # Suspicious - request failed
         else:
-            features['sslfinal_state'] = 1  # Phishing (no HTTPS)
+            features['sslfinal_state'] = -1  # Phishing (no HTTPS)
     except Exception as e:
         print(f"Exception other in extract_feature is: {e}")
-        features['sslfinal_state'] = 1  # Default to phishing
+        features['sslfinal_state'] = -1  # Default to phishing
     
     # Domain features
     domain = get_domain_from_hostname(hostname)
-    features['domain_registration_length'] = 1 if domain == -1 else map_feature_value(domain_registration_length(domain))
+    features['domain_registration_length'] = -1 if domain == -1 else domain_registration_length(domain)
     
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # HTML and DOM-based features
-        features['favicon'] = map_feature_value(favicon(url, soup, hostname))
-        features['https_token'] = map_feature_value(https_token(url))
-        features['request_url'] = map_feature_value(request_url(url, soup, hostname))
-        features['url_of_anchor'] = map_feature_value(url_of_anchor(url, soup, hostname))
-        features['links_in_tags'] = map_feature_value(links_in_tags(url, soup, hostname))
-        features['sfh'] = map_feature_value(sfh(url, soup, hostname))
-        features['submitting_to_email'] = map_feature_value(submitting_to_email(soup))
+        features['favicon'] = favicon(url, soup, hostname)
+        features['https_token'] = https_token(url)
+        features['request_url'] = request_url(url, soup, hostname)
+        features['url_of_anchor'] = url_of_anchor(url, soup, hostname)
+        features['links_in_tags'] = links_in_tags(url, soup, hostname)
+        features['sfh'] = sfh(url, soup, hostname)
+        features['submitting_to_email'] = submitting_to_email(soup)
         
         # Check redirect
-        features['redirect'] = 1 if len(response.history) > 1 else (0 if len(response.history) == 1 else -1)
+        features['redirect'] = -1 if len(response.history) > 1 else (0 if len(response.history) == 1 else 1)
         
         # Check iframe
-        features['iframe'] = map_feature_value(i_frame(soup))
+        features['iframe'] = i_frame(soup)
         
     except requests.exceptions.RequestException as e:
         # If can't fetch the page due to request error, set features to suspicious
         print(f"Exception request exception html/DOM in extract_feature is: {e}")
-        features['favicon'] = 1
-        features['https_token'] = 1 
-        features['request_url'] = 1
-        features['url_of_anchor'] = 1
-        features['links_in_tags'] = 1
-        features['sfh'] = 1
-        features['submitting_to_email'] = 1
-        features['redirect'] = 1
-        features['iframe'] = 1
+        features['favicon'] = -1
+        features['https_token'] = -1 
+        features['request_url'] = -1
+        features['url_of_anchor'] = -1
+        features['links_in_tags'] = -1
+        features['sfh'] = -1
+        features['submitting_to_email'] = -1
+        features['redirect'] = -1
+        features['iframe'] = -1
     except Exception as e:
         # For any other error, default to suspicious
         print(f"Exception other html/DOM in extract_feature is: {e}")
-        features['favicon'] = 1
-        features['https_token'] = 1 
-        features['request_url'] = 1
-        features['url_of_anchor'] = 1
-        features['links_in_tags'] = 1
-        features['sfh'] = 1
-        features['submitting_to_email'] = 1
-        features['redirect'] = 1
-        features['iframe'] = 1
+        features['favicon'] = -1
+        features['https_token'] = -1 
+        features['request_url'] = -1
+        features['url_of_anchor'] = -1
+        features['links_in_tags'] = -1
+        features['sfh'] = -1
+        features['submitting_to_email'] = -1
+        features['redirect'] = -1
+        features['iframe'] = -1
 
     # External check features
-    features['abnormal_url'] = 1 if domain == -1 else map_feature_value(abnormal_url(domain, url))
-    features['age_of_domain'] = 1 if domain == -1 else map_feature_value(age_of_domain(domain))
+    features['abnormal_url'] = -1 if domain == -1 else abnormal_url(domain, url)
+    features['age_of_domain'] = -1 if domain == -1 else age_of_domain(domain)
     
     # DNS record (defaulting to existing implementation)
-    features['dnsrecord'] = 1 if domain == -1 else -1  # -1 means legitimate
+    features['dnsrecord'] = -1 if domain == -1 else 1  # 1 means legitimate
     
     # Web traffic and Google index
-    features['web_traffic'] = map_feature_value(web_traffic(url))
-    features['google_index'] = map_feature_value(google_index(url))
+    features['web_traffic'] = web_traffic(url)
+    features['google_index'] = google_index(url)
     
     return features
 
@@ -193,7 +185,7 @@ def predict_url(url, model, feature_columns=None):
     
     # Make prediction
     prediction = model.predict(features_df)[0]
-    result = "Phishing" if prediction == 1 else "Legitimate"
+    result = "Phishing" if prediction == -1 else "Legitimate"
     
     return {
         "url": url,
@@ -313,7 +305,7 @@ def request_url(wiki, soup, domain):
     try:
         percentage = success / float(i) * 100
     except ZeroDivisionError:
-        print("ZeroDivisionError in request_url")
+        #print("ZeroDivisionError in request_url")
         return 1
     except Exception:
         print("Exception in request_url")
@@ -340,7 +332,7 @@ def url_of_anchor(wiki, soup, domain):
     try:
         percentage = unsafe / float(i) * 100
     except ZeroDivisionError:
-        print("ZeroDivisionError in url_of_anchor")
+        #print("ZeroDivisionError in url_of_anchor")
         return 1  # No anchor tags - likely legitimate
     except Exception:
         print("Exception in url_of_anchor")
@@ -372,7 +364,7 @@ def links_in_tags(wiki, soup, domain):
     try:
         percentage = success / float(i) * 100
     except ZeroDivisionError:
-        print("ZeroDivisionError in links_in_tags")
+        #print("ZeroDivisionError in links_in_tags")
         return 1  # No tags with links - likely legitimate
     except Exception:
         print("Exception in links_in_tags")

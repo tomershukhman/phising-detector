@@ -57,7 +57,8 @@ def predict_url(url, model, feature_columns=None):
     
     # Make prediction
     prediction = model.predict(features_df)[0]
-    result = "Phishing" if prediction == 1 else "Legitimate"
+    # Updated to use our consistent mapping: -1 for phishing, 1 for legitimate
+    result = "Phishing" if prediction == -1 else "Legitimate"
     
     return {
         "url": url,
@@ -79,7 +80,13 @@ def main():
         "https://www.aiismath.com/",
         "https://www.youtube.com/playlist?list=PLmWq-5VQxdn533RW5XgpCvLadG-qzMMvI",
         "https://www.visidata.org/credits/",
-        "https://phishtank.org/"
+        "https://phishtank.org/",
+        # Additional legitimate URLs
+        "https://docs.voxel51.com/dataset_zoo/index.html",
+        "https://lightning.ai/tomershukhman-3ftjt/home",
+        "https://resources.arc.net/hc/en-us",
+        "https://www.leumi.co.il/he",
+        "https://www.amazon.com/s?k=gaming+headsets"
     ]
 
     phishing_urls = [
@@ -87,7 +94,14 @@ def main():
         "https://quirky-nebula-almandine.glitch.me/",
         "https://www.filmreviewers.com/",
         "https://youremotejobs.com/",
-        "http://amazon-first-project.vercel.app/"
+        "http://amazon-first-project.vercel.app/",
+        # Additional phishing URLs
+        "http://support-docs--ledgre.webflow.io/",
+        "https://fedex.com-pf.sbs/us/payment.html",
+        "https://www.appshop-allegro.com/",
+        "http://applynflix.com/",
+        "https://www.whatsapp-direct.ru/",
+        "https://airbnb-v2-navy.vercel.app/"
     ]
     
     # Combine into test sets
@@ -105,10 +119,10 @@ def main():
             result = predict_url(url, model, feature_columns)
             processing_time = time.time() - start_time
             
-            # Store the true label (legitimate = 0)
-            true_labels.append(0)
-            # Store the predicted label (Legitimate = 0, Phishing = 1)
-            predicted_labels.append(1 if result["prediction"] == "Phishing" else 0)
+            # Store the true label (legitimate = 1)
+            true_labels.append(1)
+            # Store the predicted label (Legitimate = 1, Phishing = -1)
+            predicted_labels.append(1 if result["prediction"] == "Legitimate" else -1)
             
             results.append({
                 "url": url,
@@ -129,10 +143,10 @@ def main():
             result = predict_url(url, model, feature_columns)
             processing_time = time.time() - start_time
             
-            # Store the true label (phishing = 1)
-            true_labels.append(1)
-            # Store the predicted label (Legitimate = 0, Phishing = 1)
-            predicted_labels.append(1 if result["prediction"] == "Phishing" else 0)
+            # Store the true label (phishing = -1)
+            true_labels.append(-1)
+            # Store the predicted label (Legitimate = 1, Phishing = -1)
+            predicted_labels.append(1 if result["prediction"] == "Legitimate" else -1)
             
             results.append({
                 "url": url,
@@ -177,14 +191,18 @@ def main():
     print(f"Average processing time: {sum(r['processing_time'] for r in results)/total_count:.2f}s")
     
     # Create and display confusion matrix
-    labels = ["Legitimate", "Phishing"]
-    cm = confusion_matrix(true_labels, predicted_labels)
+    labels = ["Phishing", "Legitimate"]
+    # Convert prediction values to indices for confusion matrix
+    # Map -1 to 0 index, and 1 to 1 index
+    true_indices = [(val + 1) // 2 for val in true_labels]
+    pred_indices = [(val + 1) // 2 for val in predicted_labels]
+    cm = confusion_matrix(true_indices, pred_indices)
     
     print("\nConfusion Matrix:")
-    print("True \\ Predicted |  Legitimate  |  Phishing  ")
+    print("True \\ Predicted |  Phishing  |  Legitimate  ")
     print("-"*45)
-    print(f"Legitimate      |      {cm[0][0]}        |     {cm[0][1]}     ")
-    print(f"Phishing        |      {cm[1][0]}        |     {cm[1][1]}     ")
+    print(f"Phishing        |     {cm[0][0]}      |     {cm[0][1]}     ")
+    print(f"Legitimate      |     {cm[1][0]}      |     {cm[1][1]}     ")
     
     # Visualize the confusion matrix
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -195,11 +213,11 @@ def main():
     plt.savefig("confusion_matrix.png")
     print("\nConfusion matrix visualization saved as 'confusion_matrix.png'")
     
-    # Calculate additional metrics
-    true_positives = cm[1][1]   # Correctly identified phishing
-    true_negatives = cm[0][0]   # Correctly identified legitimate
-    false_positives = cm[0][1]  # Legitimate incorrectly classified as phishing
-    false_negatives = cm[1][0]  # Phishing incorrectly classified as legitimate
+    # Calculate additional metrics - adjusting indices for our mapping
+    true_positives = cm[0][0]   # Correctly identified phishing
+    true_negatives = cm[1][1]   # Correctly identified legitimate
+    false_positives = cm[1][0]  # Legitimate incorrectly classified as phishing
+    false_negatives = cm[0][1]  # Phishing incorrectly classified as legitimate
     
     accuracy = (true_positives + true_negatives) / total_count
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
@@ -212,7 +230,7 @@ def main():
     print(f"Recall:    {recall:.4f}")
     print(f"F1 Score:  {f1_score:.4f}")
     
-    # Additional analysis - categorize errors
+    # Additional analysis - categorize errors (adjust for our new mapping)
     false_positive_examples = [r for r in results if r["true_label"] == "Legitimate" and r["prediction"] == "Phishing"]
     false_negative_examples = [r for r in results if r["true_label"] == "Phishing" and r["prediction"] == "Legitimate"]
     
