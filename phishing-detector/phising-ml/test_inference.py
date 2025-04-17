@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
 Phishing Detector Inference Script
-This script runs the trained phishing detector model on a set of example URLs
+This script runs the trained phishing detector model on URLs from a CSV file
 to demonstrate its effectiveness in identifying phishing and legitimate websites.
 """
 
 import joblib
+import pandas as pd
+import numpy as np
 import time
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from tabulate import tabulate
+import csv
+import random
+from collections import Counter
+from urllib.parse import urlparse
 from features_extraction import extract_features
 
 def load_model(model_path='phishing_detector_model.pkl'):
@@ -19,7 +25,7 @@ def load_model(model_path='phishing_detector_model.pkl'):
 
 def get_feature_columns(model):
     """Get the feature columns used by the model"""
-    # This function assumes the model has feature_names_ attribute
+    # This function assumes the model has feature_names_in_ attribute
     # If not, we'll return None and handle it in the predict function
     try:
         return model.feature_names_in_
@@ -39,11 +45,10 @@ def predict_url(url, model, feature_columns=None):
     Returns:
         Dictionary with prediction result and URL
     """
-    # Extract features from URL using the local extract_features function
+    # Extract features from URL
     features = extract_features(url)
     
     # Convert extracted features to DataFrame
-    import pandas as pd
     features_df = pd.DataFrame([features])
     
     if feature_columns is not None:
@@ -57,7 +62,6 @@ def predict_url(url, model, feature_columns=None):
     
     # Make prediction
     prediction = model.predict(features_df)[0]
-    # Updated to use our consistent mapping: -1 for phishing, 1 for legitimate
     result = "Phishing" if prediction == -1 else "Legitimate"
     
     return {
@@ -66,187 +70,124 @@ def predict_url(url, model, feature_columns=None):
         "raw_prediction": prediction
     }
 
+def load_test_urls(csv_path='test_urls.csv', max_samples=None):
+    """
+    Load test URLs from a CSV file
+    
+    Args:
+        csv_path: Path to CSV file containing URLs and their actual labels
+        max_samples: Maximum number of samples to load (if None, load all)
+        
+    Returns:
+        List of dictionaries with URLs and actual labels
+    """
+    urls = []
+    
+    try:
+        with open(csv_path, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                urls.append({
+                    "url": row["url"],
+                    "actual": 1 if int(row["result"]) == 1 else -1
+                })
+                
+                if max_samples and len(urls) >= max_samples:
+                    break
+    except Exception as e:
+        print(f"Error loading URLs from {csv_path}: {e}")
+        return []
+    
+    print(f"Loaded {len(urls)} URLs from {csv_path}")
+    return urls
+
 def main():
-    """Main function to run inference on a set of URLs"""
-    print("Phishing Detector - Advanced Challenge Test")
-    print("===========================================")
+    """Main function to run inference on a set of URLs from CSV file"""
     
     # Load the model
     model = load_model()
     feature_columns = get_feature_columns(model)
     
-    # URLs for testing
-    legit_urls = [
-        "https://www.aiismath.com/",
-        "https://www.youtube.com/playlist?list=PLmWq-5VQxdn533RW5XgpCvLadG-qzMMvI",
-        "https://www.visidata.org/credits/",
-        "https://phishtank.org/",
-        # Additional legitimate URLs
-        "https://docs.voxel51.com/dataset_zoo/index.html",
-        "https://lightning.ai/tomershukhman-3ftjt/home",
-        "https://resources.arc.net/hc/en-us",
-        "https://www.leumi.co.il/he",
-        "https://www.amazon.com/s?k=gaming+headsets"
-    ]
-
-    phishing_urls = [
-        "https://sudden-hazel-alligator.glitch.me/",
-        "https://quirky-nebula-almandine.glitch.me/",
-        "https://www.filmreviewers.com/",
-        "https://youremotejobs.com/",
-        "http://amazon-first-project.vercel.app/",
-        # Additional phishing URLs
-        "http://support-docs--ledgre.webflow.io/",
-        "https://fedex.com-pf.sbs/us/payment.html",
-        "https://www.appshop-allegro.com/",
-        "http://applynflix.com/",
-        "https://www.whatsapp-direct.ru/",
-        "https://airbnb-v2-navy.vercel.app/"
-    ]
+    # Load URLs from CSV file
+    csv_path = 'test_urls.csv'
+    print(f"Reading URLs from {csv_path}")
+    test_urls = load_test_urls(csv_path)
     
-    # Combine into test sets
-    legitimate_urls = legit_urls
-    
+    # Perform inference
+    print("\nRunning inference on test URLs...")
     results = []
-    true_labels = []
-    predicted_labels = []
+    start_time = time.time()
     
-    # Test legitimate URLs
-    print("\nTesting challenging legitimate URLs...")
-    for url in legitimate_urls:
-        try:
-            start_time = time.time()
-            result = predict_url(url, model, feature_columns)
-            processing_time = time.time() - start_time
-            
-            # Store the true label (legitimate = 1)
-            true_labels.append(1)
-            # Store the predicted label (Legitimate = 1, Phishing = -1)
-            predicted_labels.append(1 if result["prediction"] == "Legitimate" else -1)
-            
-            results.append({
-                "url": url,
-                "true_label": "Legitimate",
-                "prediction": result["prediction"],
-                "processing_time": processing_time
-            })
-            
-            print(f"✓ Processed: {url}")
-        except Exception as e:
-            print(f"✗ Error with {url}: {e}")
-    
-    # Test phishing URLs
-    print("\nTesting sophisticated phishing URLs...")
-    for url in phishing_urls:
-        try:
-            start_time = time.time()
-            result = predict_url(url, model, feature_columns)
-            processing_time = time.time() - start_time
-            
-            # Store the true label (phishing = -1)
-            true_labels.append(-1)
-            # Store the predicted label (Legitimate = 1, Phishing = -1)
-            predicted_labels.append(1 if result["prediction"] == "Legitimate" else -1)
-            
-            results.append({
-                "url": url,
-                "true_label": "Phishing",
-                "prediction": result["prediction"],
-                "processing_time": processing_time
-            })
-            
-            print(f"✓ Processed: {url}")
-        except Exception as e:
-            print(f"✗ Error with {url}: {e}")
-    
-    # Display results in a table
-    print("\nResults:")
-    table_data = []
-    
-    for result in results:
-        # Determine if the prediction was correct
-        is_correct = result["true_label"] == result["prediction"]
-        correctness = "✓ Correct" if is_correct else "✗ Wrong"
+    for i, url_info in enumerate(test_urls):
+        url = url_info["url"]
+        actual = url_info["actual"]
         
-        table_data.append([
-            result["url"][:60] + "..." if len(result["url"]) > 60 else result["url"],
-            result["true_label"],
-            result["prediction"],
-            correctness,
-            f"{result['processing_time']:.2f}s"
-        ])
+        try:
+            print(f"\n[{i+1}/{len(test_urls)}] Testing: {url}")
+            result = predict_url(url, model, feature_columns)
+            result["actual"] = "Phishing" if actual == -1 else "Legitimate"
+            result["actual_raw"] = actual
+            results.append(result)
+            print(f"Prediction: {result['prediction']}, Actual: {result['actual']}")
+        except Exception as e:
+            print(f"Error predicting URL {url}: {e}")
     
-    headers = ["URL", "True Label", "Prediction", "Correctness", "Processing Time"]
-    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    end_time = time.time()
     
     # Calculate statistics
-    legitimate_count = sum(1 for r in results if r["prediction"] == "Legitimate")
-    phishing_count = sum(1 for r in results if r["prediction"] == "Phishing")
-    total_count = len(results)
+    print(f"\nProcessed {len(results)} URLs in {end_time - start_time:.2f} seconds")
     
-    print("\nSummary:")
-    print(f"Total URLs tested: {total_count}")
-    print(f"Predicted legitimate: {legitimate_count} ({legitimate_count/total_count*100:.1f}%)")
-    print(f"Predicted phishing: {phishing_count} ({phishing_count/total_count*100:.1f}%)")
-    print(f"Average processing time: {sum(r['processing_time'] for r in results)/total_count:.2f}s")
+    # Show results in a table
+    table_data = []
+    y_true = []
+    y_pred = []
     
-    # Create and display confusion matrix
-    labels = ["Legitimate", "Phishing"]
-    # Convert prediction values to indices for confusion matrix
-    # Map 1 to 0 index, and -1 to 1 index
-    true_indices = [(1 - val) // 2 for val in true_labels]
-    pred_indices = [(1 - val) // 2 for val in predicted_labels]
-    cm = confusion_matrix(true_indices, pred_indices)
+    for result in results:
+        table_data.append([
+            result["url"][:50] + "..." if len(result["url"]) > 50 else result["url"],
+            result["prediction"],
+            result["actual"],
+            "✓" if result["prediction"] == result["actual"] else "✗"
+        ])
+        y_true.append(result["actual_raw"])
+        y_pred.append(result["raw_prediction"])
     
+    print("\nSample Results:")
+    print(tabulate(table_data[:10], headers=["URL", "Prediction", "Actual", "Correct"]))
+    
+    # Calculate and display accuracy
+    correct = sum(1 for r in results if r["prediction"] == r["actual"])
+    accuracy = correct / len(results) if results else 0
+    print(f"\nOverall Accuracy: {accuracy:.2f} ({correct}/{len(results)})")
+    
+    # Display classification report
+    print("\nClassification Report:")
+    print(classification_report(y_true, y_pred, target_names=["Phishing", "Legitimate"]))
+    
+    # Display confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
     print("\nConfusion Matrix:")
-    print("True \\ Predicted |  Legitimate  |  Phishing  ")
-    print("-"*45)
-    print(f"Legitimate      |      {cm[0][0]}       |     {cm[0][1]}     ")
-    print(f"Phishing        |      {cm[1][0]}       |     {cm[1][1]}     ")
+    print(cm)
     
-    # Visualize the confusion matrix
+    # Plot confusion matrix
     fig, ax = plt.subplots(figsize=(8, 6))
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-    disp.plot(cmap=plt.cm.Blues, ax=ax)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Phishing", "Legitimate"])
+    disp.plot(ax=ax)
     plt.title("Phishing Detection Confusion Matrix")
-    plt.tight_layout()
     plt.savefig("confusion_matrix.png")
-    print("\nConfusion matrix visualization saved as 'confusion_matrix.png'")
+    print("\nConfusion matrix saved as 'confusion_matrix.png'")
     
-    # Calculate additional metrics - adjusting indices for our flipped mapping
-    true_negatives = cm[0][0]   # Correctly identified legitimate
-    false_negatives = cm[0][1]  # Legitimate incorrectly classified as phishing
-    false_positives = cm[1][0]  # Phishing incorrectly classified as legitimate
-    true_positives = cm[1][1]   # Correctly identified phishing
+    # Additional statistics
+    prediction_counts = Counter(r["prediction"] for r in results)
+    actual_counts = Counter(r["actual"] for r in results)
     
-    accuracy = (true_positives + true_negatives) / total_count
-    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
-    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
-    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    print("\nPrediction Distribution:")
+    for category, count in prediction_counts.items():
+        print(f"{category}: {count} ({count/len(results):.1%})")
     
-    print("\nPerformance Metrics:")
-    print(f"Accuracy:  {accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall:    {recall:.4f}")
-    print(f"F1 Score:  {f1_score:.4f}")
-    
-    # Additional analysis - categorize errors (adjust for our new mapping)
-    false_positive_examples = [r for r in results if r["true_label"] == "Legitimate" and r["prediction"] == "Phishing"]
-    false_negative_examples = [r for r in results if r["true_label"] == "Phishing" and r["prediction"] == "Legitimate"]
-    
-    if false_positive_examples:
-        print("\nFalse Positive Examples (Legitimate URLs classified as Phishing):")
-        for i, example in enumerate(false_positive_examples[:5], 1):  # Show up to 5 examples
-            print(f"{i}. {example['url']}")
-        if len(false_positive_examples) > 5:
-            print(f"...and {len(false_positive_examples) - 5} more")
-    
-    if false_negative_examples:
-        print("\nFalse Negative Examples (Phishing URLs classified as Legitimate):")
-        for i, example in enumerate(false_negative_examples[:5], 1):  # Show up to 5 examples
-            print(f"{i}. {example['url']}")
-        if len(false_negative_examples) > 5:
-            print(f"...and {len(false_negative_examples) - 5} more")
-    
+    print("\nActual Distribution:")
+    for category, count in actual_counts.items():
+        print(f"{category}: {count} ({count/len(results):.1%})")
+
 if __name__ == "__main__":
     main()
