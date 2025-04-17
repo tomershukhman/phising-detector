@@ -37,8 +37,17 @@ full_dataset['target'] = y
 full_dataset.head(5).to_csv('dataset_sample.csv', index=False)
 print("Sample dataset saved to 'dataset_sample.csv'")
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+# Select only specific features as requested
+selected_feature_indices = [0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 17, 22, 23, 24, 25, 27, 29]
+feature_names = X.columns
+selected_feature_names = [feature_names[i] for i in selected_feature_indices]
+X_selected = X.iloc[:, selected_feature_indices]
+
+print(f"\nTraining on {len(selected_feature_indices)} selected features:")
+print(f"Selected features: {selected_feature_names}")
+
+# Split the data into training and testing sets using selected features
+X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size=0.3, random_state=42)
 
 print(f"\nTraining set shape: {X_train.shape}")
 print(f"Testing set shape: {X_test.shape}")
@@ -61,7 +70,7 @@ accuracy = accuracy_score(y_test, y_pred)
 
 print(f"\nModel accuracy: {accuracy:.4f}")
 print("\nClassification Report:")
-print(classification_report(y_test, y_pred))
+print(classification_report(y_test, y_pred, zero_division=0))
 
 print("\nConfusion Matrix:")
 conf_matrix = confusion_matrix(y_test, y_pred)
@@ -70,22 +79,25 @@ print(conf_matrix)
 # Feature importances
 feature_importances = rf_model.feature_importances_
 sorted_idx = np.argsort(feature_importances)
-feature_names = X.columns
+feature_names = X_selected.columns
 
-# Plot top 15 feature importances (to make it more readable)
+# Plot feature importances (all of them since we only use selected ones)
 plt.figure(figsize=(12, 10))
-plt.barh(range(15), feature_importances[sorted_idx[-15:]], align='center')
-plt.yticks(range(15), [feature_names[i] for i in sorted_idx[-15:]])
+plt.barh(range(len(feature_importances)), feature_importances[sorted_idx], align='center')
+plt.yticks(range(len(feature_importances)), [feature_names[i] for i in sorted_idx])
 plt.xlabel('Feature Importance')
 plt.ylabel('Feature')
-plt.title('Top 15 Features for Phishing Detection')
+plt.title('Feature Importances for Phishing Detection (Selected Features)')
 plt.tight_layout()
 plt.savefig('feature_importances.png')
 print("\nFeature importance plot saved as 'feature_importances.png'")
 
 # Save the model
 joblib.dump(rf_model, 'phishing_detector_model.pkl')
+# Save the selected feature names along with the model
+joblib.dump(selected_feature_names, 'selected_features.pkl')
 print("\nModel saved as 'phishing_detector_model.pkl'")
+print("Selected features saved as 'selected_features.pkl'")
 
 # Test the prediction function on example URLs
 print("\nTesting prediction function on example URLs:")
@@ -96,23 +108,24 @@ test_urls = [
 
 for url in test_urls:
     try:
-        # Let's first print the extracted features to debug
-        features = extract_features(url)
+        # Extract only the features we need for our model - this is more efficient
+        features = extract_features(url, features_to_extract=selected_feature_names)
         print(f"\nFeatures extracted from {url}:")
         for feature_name, feature_value in features.items():
             print(f"  {feature_name}: {feature_value}")
         
-        # Use the centralized prediction function with feature column names
-        result = predict_url(url, rf_model, feature_columns=X.columns)
+        # Use the centralized prediction function with the selected feature column names
+        result = predict_url(url, rf_model, feature_columns=selected_feature_names)
         print(f"Model prediction: {result['prediction']}")
         
-        # Confirm the dataset's feature names match our extraction
-        print("\nFeature names in dataset vs. our extraction:")
-        for col in X.columns:
-            if col in features:
-                print(f"  ✓ {col}")
-            else:
+        # Confirm all required features were extracted
+        missing_features = [col for col in selected_feature_names if col not in features]
+        if missing_features:
+            print("\nWarning: Some selected features were not extracted:")
+            for col in missing_features:
                 print(f"  ✗ {col} - MISSING!")
+        else:
+            print("\nAll required features were successfully extracted.")
                 
     except Exception as e:
         print(f"Error analyzing {url}: {e}")
@@ -124,6 +137,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         # If URL provided as command line argument
         url_to_check = sys.argv[1]
-        result = predict_url(url_to_check, rf_model, feature_columns=X.columns)
+        result = predict_url(url_to_check, rf_model, feature_columns=selected_feature_names)
         print(f"\nURL: {url_to_check}")
         print(f"Prediction: {result['prediction']}")

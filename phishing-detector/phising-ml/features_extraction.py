@@ -16,123 +16,207 @@ import pandas as pd
 import requests
 from urllib.parse import urlparse
 import os
-
-# Check which whois module we have and set up the appropriate function
-try:
-    # Test if we have python-whois with whois() function
-    test_whois = whois.whois("google.com")
-    def perform_whois(hostname):
-        return whois.whois(hostname)
-except AttributeError:
-    # If attribute error, we might have the whois module without the whois function
-    # Try to use it directly as a callable
-    try:
-        test_whois = whois("google.com")
-        def perform_whois(hostname):
-            return whois(hostname)
-    except Exception:
-        # If that fails too, create a stub function that always returns -1
-        print("Warning: No functional whois module found. Domain checks will be limited.")
-        def perform_whois(hostname):
-            return -1
-except Exception as e:
-    print(f"Error initializing whois functionality: {e}")
-    # Create a stub function that always returns -1
-    def perform_whois(hostname):
-        return -1
-
-# This import is needed only when you run this file in isolation.
 import sys
-
 from patterns import *
+from class_labels_mapping import (PHISING_LABEL, LEGITIMATE_LABEL, AMBIGUOUS_LABEL)
 
-# Path - use a relative path that will work in any environment
-# We don't need this for the extract_features implementation which doesn't use the file
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INNERHTML_PATH = os.path.join(CURRENT_DIR, "innerHTML.txt")
 
 # Added function to extract features in dictionary format
-def extract_features(url):
+def extract_features(url, features_to_extract=None):
     """
     Extract phishing detection features from a URL
     
     Args:
         url: The URL string to analyze
+        features_to_extract: Optional list of specific features to extract
+                            If None, all features will be extracted
         
     Returns:
         Dictionary containing the extracted features
     """
     features = {}
     
-    # URL-based features directly from existing functions
-    features['url_length'] = url_length(url)
-    features['shortining_service'] = shortening_service(url)
-    features['having_at_symbol'] = having_at_symbol(url)
-    features['double_slash_redirecting'] = double_slash_redirecting(url)
+    # Define extractable features matching EXACTLY with the column names in dataset_sample.csv
+    feature_extractors = {
+        'having_ip_address': lambda: having_ip_address(url),
+        'url_length': lambda: url_length(url),
+        'shortining_service': lambda: shortening_service(url),
+        'having_at_symbol': lambda: having_at_symbol(url),
+        'double_slash_redirecting': lambda: double_slash_redirecting(url),
+        'prefix_suffix': lambda: prefix_suffix(get_hostname_from_url(url)),
+        'having_sub_domain': lambda: having_sub_domain(url),
+        'domain_registration_length': lambda: extract_domain_reg_length(url),
+        'favicon': lambda: extract_favicon(url),
+        'https_token': lambda: https_token(url),
+        'request_url': lambda: extract_request_url(url),
+        'url_of_anchor': lambda: extract_url_of_anchor(url),
+        'links_in_tags': lambda: extract_links_in_tags(url),
+        'sfh': lambda: extract_sfh(url),
+        'submitting_to_email': lambda: extract_submitting_to_email(url),
+        'abnormal_url': lambda: extract_abnormal_url(url),
+        'iframe': lambda: extract_iframe(url),
+        'age_of_domain': lambda: extract_age_of_domain(url),
+        'dnsrecord': lambda: extract_dns_record(url),
+        'web_traffic': lambda: web_traffic(url),
+        'google_index': lambda: google_index(url),
+        'statistical_report': lambda: extract_statistical_report(url),
+    }
     
-    hostname = get_hostname_from_url(url)
-    features['prefix_suffix'] = prefix_suffix(hostname)
-    features['having_sub_domain'] = having_sub_domain(url)
+    # If specific features are requested, only extract those
+    if features_to_extract:
+        extractors_to_use = {feat: func for feat, func in feature_extractors.items() if feat in features_to_extract}
+    else:
+        extractors_to_use = feature_extractors
     
-    # SSL features (new implementation)
+    # Extract all requested features
+    for feature_name, extractor_func in extractors_to_use.items():
+        try:
+            features[feature_name] = extractor_func()
+        except Exception as e:
+            print(f"Error extracting {feature_name}: {e}")
+            features[feature_name] = PHISING_LABEL  # Default to suspicious on error
+    
+    return features
+
+# Helper functions for feature extraction that need additional processing
+def extract_ssl_state(url):
+    """Extract SSL state feature"""
     try:
         parsed = urlparse(url)
         if (parsed.scheme == 'https'):
             # Check certificate by making a request
             try:
                 response = requests.get(url, timeout=10, verify=True)
-                features['sslfinal_state'] = 1  # Legitimate
+                return LEGITIMATE_LABEL  # Legitimate
             except requests.exceptions.SSLError as e:
-                print(f"Exception SSL error in extract_feature is: {e}")
-                features['sslfinal_state'] = -1  # Phishing (SSL error)
+                print(f"Exception SSL error: {e}")
+                return PHISING_LABEL  # Phishing (SSL error)
             except (requests.exceptions.RequestException, Exception) as e:
-                print(f"Exception request exception in extract_feature is: {e}")
-                features['sslfinal_state'] = 0  # Suspicious - request failed
+                print(f"Exception request exception: {e}")
+                return PHISING_LABEL  # Suspicious - request failed
         else:
-            features['sslfinal_state'] = -1  # Phishing (no HTTPS)
+            return PHISING_LABEL  # Phishing (no HTTPS)
     except Exception as e:
-        print(f"Exception other in extract_feature is: {e}")
-        features['sslfinal_state'] = -1  # Default to phishing
-    
-    # Domain features
+        print(f"Exception in extract_ssl_state: {e}")
+        return PHISING_LABEL  # Default to phishing
+        
+def extract_domain_reg_length(url):
+    """Extract domain registration length feature"""
+    hostname = get_hostname_from_url(url)
     domain = get_domain_from_hostname(hostname)
-    features['domain_registration_length'] = -1 if domain == -1 else domain_registration_length(domain)
-    
+    return PHISING_LABEL if domain == -1 else domain_registration_length(domain)
+
+def extract_favicon(url):
+    """Extract favicon feature"""
+    hostname = get_hostname_from_url(url)
+    try:
+        response = requests.get(url, timeout=2)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return favicon(url, soup, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] favicon: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_request_url(url):
+    """Extract request URL feature"""
+    hostname = get_hostname_from_url(url)
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # HTML and DOM-based features
-        features['favicon'] = favicon(url, soup, hostname)
-        features['https_token'] = https_token(url)
-        features['request_url'] = request_url(url, soup, hostname)
-        features['url_of_anchor'] = url_of_anchor(url, soup, hostname)
-        features['links_in_tags'] = links_in_tags(url, soup, hostname)
-        features['sfh'] = sfh(url, soup, hostname)
-        features['submitting_to_email'] = submitting_to_email(soup)
-        
-        # Check redirect
-        features['redirect'] = -1 if len(response.history) > 1 else (0 if len(response.history) == 1 else 1)
-        
-        # Check iframe
-        features['iframe'] = i_frame(soup)
-        
+        return request_url(url, soup, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] request_url: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_url_of_anchor(url):
+    """Extract URL of anchor feature"""
+    hostname = get_hostname_from_url(url)
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return url_of_anchor(url, soup, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] url_of_anchor: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_links_in_tags(url):
+    """Extract links in tags feature"""
+    hostname = get_hostname_from_url(url)
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return links_in_tags(url, soup, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] links_in_tags: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_sfh(url):
+    """Extract server form handler feature"""
+    hostname = get_hostname_from_url(url)
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return sfh(url, soup, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] sfh: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_submitting_to_email(url):
+    """Extract submitting to email feature"""
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return submitting_to_email(soup)
+    except Exception:
+        print(f"[FeatureExtraction] submitting_to_email: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
+
+def extract_abnormal_url(url):
+    """Extract abnormal URL feature"""
+    hostname = get_hostname_from_url(url)
+    domain = get_domain_from_hostname(hostname)
+    return PHISING_LABEL if domain == -1 else abnormal_url(domain, url)
+
+def extract_redirect(url):
+    """Extract redirect feature"""
+    try:
+        response = requests.get(url, timeout=10)
+        return PHISING_LABEL if len(response.history) > 1 else (0 if len(response.history) == 1 else 1)
     except Exception as e:
-        pass
+        print(f"Error extracting redirect: {e}")
+        return PHISING_LABEL  # Suspicious on error
 
-    # External check features
-    features['abnormal_url'] = -1 if domain == -1 else abnormal_url(domain, url)
-    features['age_of_domain'] = -1 if domain == -1 else age_of_domain(domain)
-    
-    # DNS record (defaulting to existing implementation)
-    features['dnsrecord'] = -1 if domain == -1 else 1  # 1 means legitimate
-    
-    # Web traffic and Google index
-    features['web_traffic'] = web_traffic(url)
-    features['google_index'] = google_index(url)
-    
-    return features
+def extract_iframe(url):
+    """Extract iframe feature"""
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return i_frame(soup)
+    except Exception:
+        print(f"[FeatureExtraction] iframe: Network/content error for URL: {url}")
+        return PHISING_LABEL  # Suspicious on error
 
+def extract_age_of_domain(url):
+    """Extract age of domain feature"""
+    hostname = get_hostname_from_url(url)
+    domain = get_domain_from_hostname(hostname)
+    return PHISING_LABEL if domain == -1 else age_of_domain(domain)
+
+def extract_dns_record(url):
+    """Extract DNS record feature"""
+    hostname = get_hostname_from_url(url)
+    domain = get_domain_from_hostname(hostname)
+    return PHISING_LABEL if domain == -1 else 1  # 1 means legitimate
+
+def extract_statistical_report(url):
+    """Extract statistical report feature"""
+    hostname = get_hostname_from_url(url)
+    try:
+        return statistical_report(url, hostname)
+    except Exception:
+        print(f"[FeatureExtraction] statistical_report: Error for URL: {url}")
+        return 0
+    
 def predict_url(url, model, feature_columns=None):
     """
     Predict if a URL is phishing or legitimate
@@ -146,8 +230,8 @@ def predict_url(url, model, feature_columns=None):
     Returns:
         Dictionary with prediction result and URL
     """
-    # Extract features from URL
-    features = extract_features(url)
+    # Extract only the features needed by the model if columns are specified
+    features = extract_features(url, features_to_extract=feature_columns)
     
     # Convert extracted features to DataFrame
     features_df = pd.DataFrame([features])
@@ -174,7 +258,7 @@ def predict_url(url, model, feature_columns=None):
 def having_ip_address(url):
     ip_address_pattern = ipv4_pattern + "|" + ipv6_pattern
     match = re.search(ip_address_pattern, url)
-    return -1 if match else 1
+    return PHISING_LABEL if match else 1
 
 
 def url_length(url):
@@ -182,27 +266,27 @@ def url_length(url):
         return 1
     if 54 <= len(url) <= 75:
         return 0
-    return -1
+    return PHISING_LABEL
 
 
 def shortening_service(url):
     match = re.search(shortening_services, url)
-    return -1 if match else 1
+    return PHISING_LABEL if match else 1
 
 
 def having_at_symbol(url):
     match = re.search('@', url)
-    return -1 if match else 1
+    return PHISING_LABEL if match else 1
 
 
 def double_slash_redirecting(url):
     last_double_slash = url.rfind('//')
-    return -1 if last_double_slash > 6 else 1
+    return PHISING_LABEL if last_double_slash > 6 else 1
 
 
 def prefix_suffix(domain):
     match = re.search('-', domain)
-    return -1 if match else 1
+    return PHISING_LABEL if match else 1
 
 
 def having_sub_domain(url):
@@ -215,11 +299,11 @@ def having_sub_domain(url):
         url = url[pos:]
     num_dots = [x.start() for x in re.finditer(r'\.', url)]
     if len(num_dots) <= 3:
-        return 1
+        return LEGITIMATE_LABEL
     elif len(num_dots) == 4:
-        return 0
+        return AMBIGUOUS_LABEL
     else:
-        return -1
+        return PHISING_LABEL
 
 
 def domain_registration_length(domain):
@@ -236,13 +320,13 @@ def domain_registration_length(domain):
         
         # Handle case where expiration_date is None or N/A
         if not domain.expiration_date:
-            return -1
+            return PHISING_LABEL
         
         # Handle case where expiration_date is a list
         expiration_date = domain.expiration_date
         if isinstance(expiration_date, list):
             if not expiration_date:  # Empty list
-                return -1
+                return PHISING_LABEL
             expiration_date = expiration_date[0]
         
         # Handle different string formats or None value
@@ -256,31 +340,31 @@ def domain_registration_length(domain):
                     except ValueError:
                         continue
                 else:  # If no format matched
-                    return -1
+                    return PHISING_LABEL
             except Exception:
-                return -1
+                return PHISING_LABEL
         
         # If expiration_date is still not a datetime object after all attempts
         if not isinstance(expiration_date, datetime):
-            return -1
+            return PHISING_LABEL
             
         # Calculate registration length in days
         registration_length = (expiration_date - today).days
         
         # Return appropriate value based on registration length
-        return 1 if registration_length > 365 else -1
+        return LEGITIMATE_LABEL if registration_length > 365 else PHISING_LABEL
         
     except Exception as e:
         print(f"Error in domain_registration_length: {e}")
-        return -1  # Default to suspicious if any error occurs
+        return PHISING_LABEL  # Default to phishing if any error occurs
 
 
 def favicon(url, soup, domain):
     for head in soup.find_all('head'):
         for head.link in soup.find_all('link', href=True):
             dots = [x.start() for x in re.finditer(r'\.', head.link['href'])]
-            return 1 if url in head.link['href'] or len(dots) == 1 or domain in head.link['href'] else -1
-    return 1
+            return LEGITIMATE_LABEL if url in head.link['href'] or len(dots) == 1 or domain in head.link['href'] else PHISING_LABEL
+    return LEGITIMATE_LABEL
 
 
 def https_token(url):
@@ -288,7 +372,7 @@ def https_token(url):
     if match and match.start() == 0:
         url = url[match.end():]
     match = re.search('http|https', url)
-    return -1 if match else 1
+    return PHISING_LABEL if match else LEGITIMATE_LABEL
 
 
 def request_url(wiki, soup, domain):
@@ -325,14 +409,14 @@ def request_url(wiki, soup, domain):
         return 1
     except Exception:
         print("Exception in request_url")
-        return 0  # Default to suspicious for other errors
+        return PHISING_LABEL  # Default to suspicious for other errors
 
     if percentage < 22.0:
-        return 1
+        return LEGITIMATE_LABEL
     elif 22.0 <= percentage < 61.0:
-        return 0
+        return AMBIGUOUS_LABEL
     else:
-        return -1
+        return PHISING_LABEL
 
 
 def url_of_anchor(wiki, soup, domain):
@@ -352,14 +436,14 @@ def url_of_anchor(wiki, soup, domain):
         return 1  # No anchor tags - likely legitimate
     except Exception:
         print("Exception in url_of_anchor")
-        return 0  # Other errors - suspicious
+        return PHISING_LABEL  # Other errors - suspicious
         
     if percentage < 31.0:
-        return 1
+        return LEGITIMATE_LABEL
     elif 31.0 <= percentage < 67.0:
-        return 0
+        return AMBIGUOUS_LABEL
     else:
-        return -1
+        return PHISING_LABEL
 
 
 def links_in_tags(wiki, soup, domain):
@@ -381,35 +465,35 @@ def links_in_tags(wiki, soup, domain):
         percentage = success / float(i) * 100
     except ZeroDivisionError:
         #print("ZeroDivisionError in links_in_tags")
-        return 1  # No tags with links - likely legitimate
+        return LEGITIMATE_LABEL  # No tags with links - likely legitimate
     except Exception:
         print("Exception in links_in_tags")
-        return 0  # Other errors - suspicious
+        return PHISING_LABEL  # Other errors - suspicious
 
     if percentage < 17.0:
-        return 1
+        return LEGITIMATE_LABEL
     elif 17.0 <= percentage < 81.0:
-        return 0
+        return AMBIGUOUS_LABEL
     else:
-        return -1
+        return PHISING_LABEL
 
 
 def sfh(wiki, soup, domain):
     for form in soup.find_all('form', action=True):
         if form['action'] == "" or form['action'] == "about:blank":
-            return -1
+            return PHISING_LABEL
         elif wiki not in form['action'] and domain not in form['action']:
-            return 0
+            return AMBIGUOUS_LABEL
         else:
-            return 1
-    return 1
+            return LEGITIMATE_LABEL
+    return LEGITIMATE_LABEL
 
 
 def submitting_to_email(soup):
     for form in soup.find_all('form', action=True):
-        return -1 if "mailto:" in form['action'] else 1
+        return PHISING_LABEL if "mailto:" in form['action'] else LEGITIMATE_LABEL
     # In case there is no form in the soup, then it is safe to return 1.
-    return 1
+    return LEGITIMATE_LABEL
 
 
 def abnormal_url(domain, url):
@@ -418,9 +502,9 @@ def abnormal_url(domain, url):
     else:
         hostname = domain.domain_name
     if hostname is None:
-        return -1
+        return PHISING_LABEL
     match = re.search(hostname.lower(), url)
-    return -1 if match is None else 1
+    return PHISING_LABEL if match is None else LEGITIMATE_LABEL
 
 
 def i_frame(soup):
@@ -428,17 +512,17 @@ def i_frame(soup):
     # First check correctly named iframe elements
     for iframe in soup.find_all('iframe', width=True, height=True, frameBorder=True):
         if iframe['width'] == "0" and iframe['height'] == "0" and iframe['frameBorder'] == "0":
-            return -1
+            return PHISING_LABEL
         if iframe['width'] == "0" or iframe['height'] == "0" or iframe['frameBorder'] == "0":
-            return 0
+            return PHISING_LABEL
             
     # Also check for i_frame as in the original code (though this is likely a typo)
     for i_frames in soup.find_all('i_frame', width=True, height=True, frameBorder=True):
         if i_frames['width'] == "0" and i_frames['height'] == "0" and i_frames['frameBorder'] == "0":
-            return -1
+            return PHISING_LABEL
         if i_frames['width'] == "0" or i_frames['height'] == "0" or i_frames['frameBorder'] == "0":
-            return 0
-    return 1
+            return PHISING_LABEL
+    return LEGITIMATE_LABEL  # No suspicious iframes found
 
 
 def age_of_domain(domain):
@@ -452,13 +536,13 @@ def age_of_domain(domain):
     try:
         # Handle case where creation_date is None or N/A
         if not domain.creation_date:
-            return -1
+            return PHISING_LABEL
             
         # Handle case where creation_date is a list
         creation_date = domain.creation_date
         if isinstance(creation_date, list):
             if not creation_date:  # Empty list
-                return -1
+                return PHISING_LABEL
             creation_date = creation_date[0]
             
         # Handle different string formats or None value for creation_date
@@ -472,20 +556,20 @@ def age_of_domain(domain):
                     except ValueError:
                         continue
                 else:  # If no format matched
-                    return -1
+                    return PHISING_LABEL
             except Exception:
-                return -1
+                return PHISING_LABEL
                 
         # If creation_date is still not a datetime object after all attempts
         if not isinstance(creation_date, datetime):
-            return -1
+            return PHISING_LABEL
             
         # Handle case where expiration_date is None or N/A
         if not domain.expiration_date:
             # If we have creation date but no expiration, calculate age from now
             today = datetime.now()
             age_days = (today - creation_date).days
-            return 1 if age_days > 180 else -1
+            return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL
             
         # Handle case where expiration_date is a list
         expiration_date = domain.expiration_date
@@ -494,7 +578,7 @@ def age_of_domain(domain):
                 # Calculate age from now
                 today = datetime.now()
                 age_days = (today - creation_date).days
-                return 1 if age_days > 180 else -1
+                return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL
             expiration_date = expiration_date[0]
             
         # Handle different string formats for expiration_date
@@ -511,19 +595,19 @@ def age_of_domain(domain):
                     # Calculate age from now
                     today = datetime.now()
                     age_days = (today - creation_date).days
-                    return 1 if age_days > 180 else -1
+                    return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL
             except Exception:
                 # Calculate age from now
                 today = datetime.now()
                 age_days = (today - creation_date).days
-                return 1 if age_days > 180 else -1
+                return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL
                 
         # If expiration_date is still not a datetime object
         if not isinstance(expiration_date, datetime):
             # Calculate age from now
             today = datetime.now()
             age_days = (today - creation_date).days
-            return 1 if age_days > 180 else -1
+            return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL
 
         # Calculate domain age based on creation and expiration dates
         try:
@@ -533,11 +617,11 @@ def age_of_domain(domain):
             today = datetime.now()
             age_days = (today - creation_date).days
             
-        return 1 if age_days > 180 else -1  # 180 days = ~6 months
+        return LEGITIMATE_LABEL if age_days > 180 else PHISING_LABEL  # 180 days = ~6 months
         
     except Exception as e:
         print(f"Error in age_of_domain: {e}")
-        return -1  # Default to suspicious if any error occurs
+        return PHISING_LABEL  # Default to suspicious if any error occurs
 
 
 def web_traffic(url):
@@ -567,19 +651,19 @@ def web_traffic(url):
             hostname.endswith('.' + domain) or
             '.' + domain + '.' in hostname
         ):
-            return 1  # Legitimate - likely has good traffic
+            return LEGITIMATE_LABEL  # Legitimate - likely has good traffic
     
     # Check domain length - extremely long domains are suspicious
     if len(hostname) > 30:
-        return -1  # Phishing - suspicious domain length
+        return PHISING_LABEL  # Phishing - suspicious domain length
     
     # Default to suspicious if we can't determine
-    return 0
+    return PHISING_LABEL
 
 
 def google_index(url):
     site = search(url, 5)
-    return 1 if site else -1
+    return LEGITIMATE_LABEL if site else PHISING_LABEL
 
 
 def statistical_report(url, hostname):
@@ -588,7 +672,7 @@ def statistical_report(url, hostname):
     except socket.gaierror as e:
         print(f"Socket gaierror in statistical_report: {e}")
         # Hostname couldn't be resolved
-        return -1
+        return PHISING_LABEL
     except Exception as e:
         print(f"Exception in statistical_report {e}")
         # Any other exception
@@ -597,11 +681,11 @@ def statistical_report(url, hostname):
     url_match = re.search(suspicious_tlds, url)
     ip_match = re.search(suspicious_ips, ip_address)
     if url_match:
-        return -1
+        return PHISING_LABEL
     elif ip_match:
-        return -1
+        return PHISING_LABEL
     else:
-        return 1
+        return LEGITIMATE_LABEL
 
 
 def get_hostname_from_url(url):
@@ -620,60 +704,8 @@ def get_hostname_from_url(url):
 
 def get_domain_from_hostname(hostname):
     try:
-        domain = perform_whois(hostname)
-        return domain
-    except Exception as e:
-        # Handle any whois exceptions more generically
-        print(f"Whois error in get_domain_from_hostname: {e}")
-        # Domain doesn't exist or couldn't be processed
-        return -1
+        return whois.whois(hostname)
+    except Exception:
+        print(f"[FeatureExtraction] whois: Could not resolve domain for hostname: {hostname}")
+        return PHISING_LABEL
 
-
-def main(url):
-    with open(INNERHTML_PATH, 'r', encoding='utf8') as file:
-        soup_string = file.read()
-
-    soup = BeautifulSoup(soup_string, 'html.parser')
-
-    status = []
-    hostname = get_hostname_from_url(url)
-
-    status.append(having_ip_address(url))
-    status.append(url_length(url))
-    status.append(shortening_service(url))
-    status.append(having_at_symbol(url))
-    status.append(double_slash_redirecting(url))
-    status.append(prefix_suffix(hostname))
-    status.append(having_sub_domain(url))
-
-    domain = get_domain_from_hostname(hostname)
-
-    status.append(-1 if domain == -1 else domain_registration_length(domain))
-
-    status.append(favicon(url, soup, hostname))
-    status.append(https_token(url))
-    status.append(request_url(url, soup, hostname))
-    status.append(url_of_anchor(url, soup, hostname))
-    status.append(links_in_tags(url, soup, hostname))
-    status.append(sfh(url, soup, hostname))
-    status.append(submitting_to_email(soup))
-
-    status.append(-1 if domain == -1 else abnormal_url(domain, url))
-
-    status.append(i_frame(soup))
-
-    status.append(-1 if domain == -1 else age_of_domain(domain))
-
-    status.append(-1 if domain == -1 else 1)
-
-    status.append(web_traffic(url))
-    status.append(google_index(url))
-    status.append(statistical_report(url, hostname))
-
-    # print('\n1. Having IP address\n2. URL Length\n3. URL Shortening service\n4. Having @ symbol\n'
-    #     '5. Having double slash\n6. Having dash symbol(Prefix Suffix)\n7. Having multiple subdomains\n'
-    #    '8. Domain Registration Length\n9. Favicon\n10. HTTP or HTTPS token in domain name\n'
-    #   '11. Request URL\n12. URL of Anchor\n13. Links in tags\n14. SFH\n15. Submitting to email\n16. Abnormal URL\n'
-    #  '17. IFrame\n18. Age of Domain\n19. DNS Record\n20. Web Traffic\n21. Google Index\n22. Statistical Reports\n')
-    # print(status)
-    return status

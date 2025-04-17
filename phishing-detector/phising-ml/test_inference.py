@@ -17,6 +17,10 @@ import random
 from collections import Counter
 from urllib.parse import urlparse
 from features_extraction import extract_features
+import seaborn as sns  # Add this import
+from class_labels_mapping import PHISING_LABEL, LEGITIMATE_LABEL, AMBIGUOUS_LABEL
+
+DEBUG_SAMPLES = 5  # Number of samples per class to use in debug mode
 
 def load_model(model_path='phishing_detector_model.pkl'):
     """Load the trained phishing detector model"""
@@ -101,7 +105,7 @@ def load_test_urls(csv_path='test_urls.csv', max_samples=None):
     print(f"Loaded {len(urls)} URLs from {csv_path}")
     return urls
 
-def main():
+def main(debug=False):
     """Main function to run inference on a set of URLs from CSV file"""
     
     # Load the model
@@ -112,6 +116,13 @@ def main():
     csv_path = 'test_urls.csv'
     print(f"Reading URLs from {csv_path}")
     test_urls = load_test_urls(csv_path)
+
+    # Debug mode: pick DEBUG_SAMPLES with result=1 and DEBUG_SAMPLES with result=-1
+    if debug:
+        pos_samples = [u for u in test_urls if u["actual"] == LEGITIMATE_LABEL][:DEBUG_SAMPLES]
+        neg_samples = [u for u in test_urls if u["actual"] == PHISING_LABEL][:DEBUG_SAMPLES]
+        test_urls = pos_samples + neg_samples
+        print(f"[DEBUG MODE] Using {len(test_urls)} URLs: {len(pos_samples)} Legitimate, {len(neg_samples)} Phishing")
     
     # Perform inference
     print("\nRunning inference on test URLs...")
@@ -125,7 +136,7 @@ def main():
         try:
             print(f"\n[{i+1}/{len(test_urls)}] Testing: {url}")
             result = predict_url(url, model, feature_columns)
-            result["actual"] = "Phishing" if actual == -1 else "Legitimate"
+            result["actual"] = "Phishing" if actual == PHISING_LABEL else "Legitimate"
             result["actual_raw"] = actual
             results.append(result)
             print(f"Prediction: {result['prediction']}, Actual: {result['actual']}")
@@ -162,10 +173,10 @@ def main():
     
     # Display classification report
     print("\nClassification Report:")
-    print(classification_report(y_true, y_pred, target_names=["Phishing", "Legitimate"]))
+    print(classification_report(y_true, y_pred, labels=[PHISING_LABEL, LEGITIMATE_LABEL], target_names=["Phishing", "Legitimate"], zero_division=0))
     
     # Display confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, labels=[PHISING_LABEL, LEGITIMATE_LABEL])
     print("\nConfusion Matrix:")
     print(cm)
     
@@ -176,6 +187,18 @@ def main():
     plt.title("Phishing Detection Confusion Matrix")
     plt.savefig("confusion_matrix.png")
     print("\nConfusion matrix saved as 'confusion_matrix.png'")
+    
+    # Plot confusion matrix (seaborn heatmap for readability)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
+                xticklabels=["Phishing", "Legitimate"],
+                yticklabels=["Phishing", "Legitimate"], ax=ax)
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Phishing Detection Confusion Matrix (Readable)')
+    plt.tight_layout()
+    plt.savefig('confusion_matrix_readable.png')
+    print("\nReadable confusion matrix saved as 'confusion_matrix_readable.png'")
     
     # Additional statistics
     prediction_counts = Counter(r["prediction"] for r in results)
@@ -190,4 +213,6 @@ def main():
         print(f"{category}: {count} ({count/len(results):.1%})")
 
 if __name__ == "__main__":
-    main()
+    import sys
+    debug = "--debug" in sys.argv
+    main(debug=debug)
