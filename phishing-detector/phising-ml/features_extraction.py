@@ -36,6 +36,43 @@ def extract_features(url, features_to_extract=None):
     """
     features = {}
     
+    # Cache common operations to avoid redundant expensive calls
+    hostname = get_hostname_from_url(url)
+    
+    # Perform WHOIS lookup only once - this is an expensive operation
+    domain = None
+    domain_needed = not features_to_extract or any(f in features_to_extract for f in [
+        'domain_registration_length', 'abnormal_url', 'age_of_domain', 'dnsrecord'
+    ])
+    
+    if domain_needed:
+        domain = get_domain_from_hostname(hostname)
+    
+    # DNS resolution - only do this once if needed
+    ip_address = None
+    need_ip = not features_to_extract or 'statistical_report' in features_to_extract
+    if need_ip and hostname:
+        try:
+            ip_address = socket.gethostbyname(hostname)
+        except Exception as e:
+            print(f"Error resolving IP for {hostname}: {e}")
+    
+    # Make a single HTTP request for all HTML-based features
+    response = None
+    soup = None
+    try:
+        # Only make the HTTP request if we'll need it for any of the features
+        need_html_content = not features_to_extract or any(f in features_to_extract for f in [
+            'favicon', 'request_url', 'url_of_anchor', 'links_in_tags', 
+            'sfh', 'submitting_to_email', 'iframe', 'redirect'
+        ])
+        
+        if need_html_content:
+            response, soup = get_url_content(url, timeout=5)  # Increased timeout for reliability
+    except Exception as e:
+        print(f"Error fetching URL content: {e}")
+        # We'll continue and let individual extractors handle the None values
+    
     # Define extractable features matching EXACTLY with the column names in dataset_sample.csv
     feature_extractors = {
         'having_ip_address': lambda: having_ip_address(url),
@@ -43,23 +80,24 @@ def extract_features(url, features_to_extract=None):
         'shortining_service': lambda: shortening_service(url),
         'having_at_symbol': lambda: having_at_symbol(url),
         'double_slash_redirecting': lambda: double_slash_redirecting(url),
-        'prefix_suffix': lambda: prefix_suffix(get_hostname_from_url(url)),
+        'prefix_suffix': lambda: prefix_suffix(hostname),
         'having_sub_domain': lambda: having_sub_domain(url),
-        'domain_registration_length': lambda: extract_domain_reg_length(url),
-        'favicon': lambda: extract_favicon(url),
+        'domain_registration_length': lambda: domain_registration_length(domain) if domain != -1 else PHISING_LABEL,
+        'favicon': lambda: favicon(url, soup, hostname) if soup else PHISING_LABEL,
         'https_token': lambda: https_token(url),
-        'request_url': lambda: extract_request_url(url),
-        'url_of_anchor': lambda: extract_url_of_anchor(url),
-        'links_in_tags': lambda: extract_links_in_tags(url),
-        'sfh': lambda: extract_sfh(url),
-        'submitting_to_email': lambda: extract_submitting_to_email(url),
-        'abnormal_url': lambda: extract_abnormal_url(url),
-        'iframe': lambda: extract_iframe(url),
-        'age_of_domain': lambda: extract_age_of_domain(url),
-        'dnsrecord': lambda: extract_dns_record(url),
-        'web_traffic': lambda: web_traffic(url),
+        'request_url': lambda: request_url(url, soup, hostname) if soup else PHISING_LABEL,
+        'url_of_anchor': lambda: url_of_anchor(url, soup, hostname) if soup else PHISING_LABEL,
+        'links_in_tags': lambda: links_in_tags(url, soup, hostname) if soup else PHISING_LABEL,
+        'sfh': lambda: sfh(url, soup, hostname) if soup else PHISING_LABEL,
+        'submitting_to_email': lambda: submitting_to_email(soup) if soup else PHISING_LABEL,
+        'abnormal_url': lambda: abnormal_url(domain, url) if domain != -1 else PHISING_LABEL,
+        'redirect': lambda: PHISING_LABEL if response and len(response.history) > 1 else (0 if response and len(response.history) == 1 else 1),
+        'iframe': lambda: i_frame(soup) if soup else PHISING_LABEL,
+        'age_of_domain': lambda: age_of_domain(domain) if domain != -1 else PHISING_LABEL,
+        'dnsrecord': lambda: 1 if domain != -1 else PHISING_LABEL,  # 1 means legitimate
+        'web_traffic': lambda: web_traffic(hostname),  # Pass hostname instead of re-extracting it
         'google_index': lambda: google_index(url),
-        'statistical_report': lambda: extract_statistical_report(url),
+        'statistical_report': lambda: statistical_report_cached(url, hostname, ip_address) if hostname else PHISING_LABEL,
     }
     
     # If specific features are requested, only extract those
@@ -78,22 +116,98 @@ def extract_features(url, features_to_extract=None):
     
     return features
 
+# New helper function that uses cached IP address
+def statistical_report_cached(url, hostname, ip_address=None):
+    """Optimized version of statistical_report that can use a pre-resolved IP address"""
+    try:
+        if not ip_address:
+            ip_address = socket.gethostbyname(hostname)
+    except socket.gaierror as e:
+        print(f"Socket gaierror in statistical_report: {e}")
+        # Hostname couldn't be resolved
+        return PHISING_LABEL
+    except Exception as e:
+        print(f"Exception in statistical_report {e}")
+        # Any other exception
+        return 0
+        
+    url_match = re.search(suspicious_tlds, url)
+    ip_match = re.search(suspicious_ips, ip_address)
+    if url_match:
+        return PHISING_LABEL
+    elif ip_match:
+        return PHISING_LABEL
+    else:
+        return LEGITIMATE_LABEL
+
+# Precompile regular expressions for better performance
+# These are used frequently across multiple functions
+RE_AT_SYMBOL = re.compile('@')
+RE_HYPHEN = re.compile('-')
+RE_DOT = re.compile(r'\.')
+RE_HTTP_HTTPS = re.compile('http|https')
+
+# Create a simple cache for Google search results to avoid repeated API calls
+_google_search_cache = {}
+
+def google_index(url):
+    """Check if URL is indexed by Google with caching to avoid API rate limits"""
+    if url in _google_search_cache:
+        return _google_search_cache[url]
+        
+    try:
+        site = search(url, 5)
+        result = LEGITIMATE_LABEL if site else PHISING_LABEL
+        _google_search_cache[url] = result
+        return result
+    except Exception as e:
+        print(f"Error in google_index: {e}")
+        return PHISING_LABEL  # Default to suspicious on error
+
 # Helper functions for feature extraction that need additional processing
+# Add a separate cache for SSL verification requests
+_ssl_verification_cache = {}
+
+def verify_ssl_connection(url, timeout=2):
+    """
+    Verify SSL connection with caching to avoid redundant SSL verification requests
+    
+    Returns:
+        bool: True if SSL verification passed, False otherwise
+    """
+    global _ssl_verification_cache
+    
+    # Return cached result if available
+    if url in _ssl_verification_cache:
+        return _ssl_verification_cache[url]
+    
+    # Make a new request if not cached
+    try:
+        response = requests.get(url, timeout=timeout, verify=True)
+        result = True
+        # Cache the success
+        _ssl_verification_cache[url] = result
+        return result
+    except requests.exceptions.SSLError:
+        # Cache the failure
+        _ssl_verification_cache[url] = False
+        return False
+    except Exception as e:
+        print(f"Exception in verify_ssl_connection: {e}")
+        # Cache the failure
+        _ssl_verification_cache[url] = False
+        return False
+
 def extract_ssl_state(url):
     """Extract SSL state feature"""
     try:
         parsed = urlparse(url)
         if (parsed.scheme == 'https'):
-            # Check certificate by making a request
-            try:
-                response = requests.get(url, timeout=10, verify=True)
+            # Check certificate using the cached verification mechanism
+            if verify_ssl_connection(url):
                 return LEGITIMATE_LABEL  # Legitimate
-            except requests.exceptions.SSLError as e:
-                print(f"Exception SSL error: {e}")
+            else:
                 return PHISING_LABEL  # Phishing (SSL error)
-            except (requests.exceptions.RequestException, Exception) as e:
-                print(f"Exception request exception: {e}")
-                return PHISING_LABEL  # Suspicious - request failed
         else:
             return PHISING_LABEL  # Phishing (no HTTPS)
     except Exception as e:
@@ -106,68 +220,80 @@ def extract_domain_reg_length(url):
     domain = get_domain_from_hostname(hostname)
     return PHISING_LABEL if domain == -1 else domain_registration_length(domain)
 
-def extract_favicon(url):
+def extract_favicon(url, content=None, parsed_content=None):
     """Extract favicon feature"""
+    if content is not None and parsed_content is not None:
+        return favicon(url, parsed_content, get_hostname_from_url(url))
+    
     hostname = get_hostname_from_url(url)
-    try:
-        response = requests.get(url, timeout=2)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    response, soup = get_url_content(url)
+    if soup:
         return favicon(url, soup, hostname)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] favicon: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_request_url(url):
+def extract_request_url(url, content=None, parsed_content=None):
     """Extract request URL feature"""
+    if content is not None and parsed_content is not None:
+        return request_url(url, parsed_content, get_hostname_from_url(url))
+    
     hostname = get_hostname_from_url(url)
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    response, soup = get_url_content(url)
+    if soup:
         return request_url(url, soup, hostname)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] request_url: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_url_of_anchor(url):
+def extract_url_of_anchor(url, content=None, parsed_content=None):
     """Extract URL of anchor feature"""
+    if content is not None and parsed_content is not None:
+        return url_of_anchor(url, parsed_content, get_hostname_from_url(url))
+    
     hostname = get_hostname_from_url(url)
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    response, soup = get_url_content(url)
+    if soup:
         return url_of_anchor(url, soup, hostname)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] url_of_anchor: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_links_in_tags(url):
+def extract_links_in_tags(url, content=None, parsed_content=None):
     """Extract links in tags feature"""
+    if content is not None and parsed_content is not None:
+        return links_in_tags(url, parsed_content, get_hostname_from_url(url))
+    
     hostname = get_hostname_from_url(url)
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    response, soup = get_url_content(url)
+    if soup:
         return links_in_tags(url, soup, hostname)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] links_in_tags: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_sfh(url):
+def extract_sfh(url, content=None, parsed_content=None):
     """Extract server form handler feature"""
+    if content is not None and parsed_content is not None:
+        return sfh(url, parsed_content, get_hostname_from_url(url))
+    
     hostname = get_hostname_from_url(url)
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    response, soup = get_url_content(url)
+    if soup:
         return sfh(url, soup, hostname)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] sfh: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_submitting_to_email(url):
+def extract_submitting_to_email(url, content=None, parsed_content=None):
     """Extract submitting to email feature"""
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    if content is not None and parsed_content is not None:
+        return submitting_to_email(parsed_content)
+    
+    response, soup = get_url_content(url)
+    if soup:
         return submitting_to_email(soup)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] submitting_to_email: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
@@ -177,22 +303,27 @@ def extract_abnormal_url(url):
     domain = get_domain_from_hostname(hostname)
     return PHISING_LABEL if domain == -1 else abnormal_url(domain, url)
 
-def extract_redirect(url):
+def extract_redirect(url, content=None, response_obj=None):
     """Extract redirect feature"""
-    try:
-        response = requests.get(url, timeout=10)
+    if response_obj is not None:
+        return PHISING_LABEL if len(response_obj.history) > 1 else (0 if len(response_obj.history) == 1 else 1)
+    
+    response, _ = get_url_content(url)
+    if response:
         return PHISING_LABEL if len(response.history) > 1 else (0 if len(response.history) == 1 else 1)
-    except Exception as e:
-        print(f"Error extracting redirect: {e}")
+    else:
+        print(f"Error extracting redirect: Could not fetch URL content")
         return PHISING_LABEL  # Suspicious on error
 
-def extract_iframe(url):
+def extract_iframe(url, content=None, parsed_content=None):
     """Extract iframe feature"""
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    if content is not None and parsed_content is not None:
+        return i_frame(parsed_content)
+    
+    response, soup = get_url_content(url)
+    if soup:
         return i_frame(soup)
-    except Exception:
+    else:
         print(f"[FeatureExtraction] iframe: Network/content error for URL: {url}")
         return PHISING_LABEL  # Suspicious on error
 
@@ -275,7 +406,7 @@ def shortening_service(url):
 
 
 def having_at_symbol(url):
-    match = re.search('@', url)
+    match = RE_AT_SYMBOL.search(url)
     return PHISING_LABEL if match else 1
 
 
@@ -285,7 +416,7 @@ def double_slash_redirecting(url):
 
 
 def prefix_suffix(domain):
-    match = re.search('-', domain)
+    match = RE_HYPHEN.search(domain)
     return PHISING_LABEL if match else 1
 
 
@@ -371,45 +502,29 @@ def https_token(url):
     match = re.search(http_https, url)
     if match and match.start() == 0:
         url = url[match.end():]
-    match = re.search('http|https', url)
+    match = RE_HTTP_HTTPS.search(url)
     return PHISING_LABEL if match else LEGITIMATE_LABEL
 
 
 def request_url(wiki, soup, domain):
     i = 0
     success = 0
-    for img in soup.find_all('img', src=True):
-        dots = [x.start() for x in re.finditer(r'\.', img['src'])]
-        if wiki in img['src'] or domain in img['src'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
-
-    for audio in soup.find_all('audio', src=True):
-        dots = [x.start() for x in re.finditer(r'\.', audio['src'])]
-        if wiki in audio['src'] or domain in audio['src'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
-
-    for embed in soup.find_all('embed', src=True):
-        dots = [x.start() for x in re.finditer(r'\.', embed['src'])]
-        if wiki in embed['src'] or domain in embed['src'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
-
-    for i_frame in soup.find_all('i_frame', src=True):
-        dots = [x.start() for x in re.finditer(r'\.', i_frame['src'])]
-        if wiki in i_frame['src'] or domain in i_frame['src'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
+    
+    # Precompile the dot pattern regex for better performance
+    dot_pattern = RE_DOT
+    
+    # Process all elements with src attributes in a single loop
+    for element in soup.find_all(['img', 'audio', 'embed', 'i_frame'], src=True):
+        dots = [x.start() for x in dot_pattern.finditer(element['src'])]
+        if wiki in element['src'] or domain in element['src'] or len(dots) == 1:
+            success += 1
+        i += 1
 
     try:
-        percentage = success / float(i) * 100
-    except ZeroDivisionError:
-        #print("ZeroDivisionError in request_url")
-        return 1
+        percentage = success / float(i) * 100 if i > 0 else 0
     except Exception:
         print("Exception in request_url")
-        return PHISING_LABEL  # Default to suspicious for other errors
+        return PHISING_LABEL  # Default to suspicious for errors
 
     if percentage < 22.0:
         return LEGITIMATE_LABEL
@@ -422,18 +537,18 @@ def request_url(wiki, soup, domain):
 def url_of_anchor(wiki, soup, domain):
     i = 0
     unsafe = 0
+    
+    # Create a single compiled pattern for common unsafe patterns
+    unsafe_patterns = ["#", "javascript", "mailto"]
+    
     for a in soup.find_all('a', href=True):
-        # javascript per 'JavaScript ::void(0)'
-        if "#" in a['href'] or "javascript" in a['href'].lower() or "mailto" in a['href'].lower() or not (
-                wiki in a['href'] or domain in a['href']):
-            unsafe = unsafe + 1
-        i = i + 1
+        href_lower = a['href'].lower()
+        if any(pattern in href_lower for pattern in unsafe_patterns) or not (wiki in a['href'] or domain in a['href']):
+            unsafe += 1
+        i += 1
         
     try:
-        percentage = unsafe / float(i) * 100
-    except ZeroDivisionError:
-        #print("ZeroDivisionError in url_of_anchor")
-        return 1  # No anchor tags - likely legitimate
+        percentage = unsafe / float(i) * 100 if i > 0 else 0
     except Exception:
         print("Exception in url_of_anchor")
         return PHISING_LABEL  # Other errors - suspicious
@@ -449,23 +564,26 @@ def url_of_anchor(wiki, soup, domain):
 def links_in_tags(wiki, soup, domain):
     i = 0
     success = 0
-    for link in soup.find_all('link', href=True):
-        dots = [x.start() for x in re.finditer(r'\.', link['href'])]
-        if wiki in link['href'] or domain in link['href'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
-
-    for script in soup.find_all('script', src=True):
-        dots = [x.start() for x in re.finditer(r'\.', script['src'])]
-        if wiki in script['src'] or domain in script['src'] or len(dots) == 1:
-            success = success + 1
-        i = i + 1
+    
+    # Precompile the dot pattern regex for better performance
+    dot_pattern = RE_DOT
+    
+    # Process both link and script tags in a single loop
+    for element in soup.find_all(['link', 'script']):
+        if element.name == 'link' and element.has_attr('href'):
+            attr = 'href'
+        elif element.name == 'script' and element.has_attr('src'):
+            attr = 'src'
+        else:
+            continue
+            
+        dots = [x.start() for x in dot_pattern.finditer(element[attr])]
+        if wiki in element[attr] or domain in element[attr] or len(dots) == 1:
+            success += 1
+        i += 1
         
     try:
-        percentage = success / float(i) * 100
-    except ZeroDivisionError:
-        #print("ZeroDivisionError in links_in_tags")
-        return LEGITIMATE_LABEL  # No tags with links - likely legitimate
+        percentage = success / float(i) * 100 if i > 0 else 100  # Default to 100% if no elements (legitimate)
     except Exception:
         print("Exception in links_in_tags")
         return PHISING_LABEL  # Other errors - suspicious
@@ -661,11 +779,6 @@ def web_traffic(url):
     return PHISING_LABEL
 
 
-def google_index(url):
-    site = search(url, 5)
-    return LEGITIMATE_LABEL if site else PHISING_LABEL
-
-
 def statistical_report(url, hostname):
     try:
         ip_address = socket.gethostbyname(hostname)
@@ -708,4 +821,34 @@ def get_domain_from_hostname(hostname):
     except Exception:
         print(f"[FeatureExtraction] whois: Could not resolve domain for hostname: {hostname}")
         return PHISING_LABEL
+
+# Implement a module-level cache for HTTP requests to prevent redundant calls
+_url_content_cache = {}
+
+def get_url_content(url, timeout=5):
+    """
+    Get URL content with caching to ensure only one HTTP request is made per URL
+    
+    Returns:
+        tuple: (response object, BeautifulSoup object) or (None, None) on error
+    """
+    global _url_content_cache
+    
+    # Return cached result if available
+    if url in _url_content_cache:
+        return _url_content_cache[url]
+    
+    # Make a new request if not cached
+    try:
+        response = requests.get(url, timeout=timeout)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        result = (response, soup)
+        # Cache the result
+        _url_content_cache[url] = result
+        return result
+    except Exception as e:
+        print(f"Error fetching URL content for {url}: {e}")
+        # Cache the failure to prevent repeated attempts
+        _url_content_cache[url] = (None, None)
+        return None, None
 
