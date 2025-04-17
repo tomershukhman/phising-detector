@@ -1,0 +1,99 @@
+Phishing Detector - Advanced Challenge Test
+===========================================
+Loading model from phishing_detector_model.pkl...
+
+Testing challenging legitimate URLs...
+✓ Processed: https://www.aiismath.com/
+✓ Processed: https://www.youtube.com/playlist?list=PLmWq-5VQxdn533RW5XgpCvLadG-qzMMvI
+✓ Processed: https://www.visidata.org/credits/
+✓ Processed: https://phishtank.org/
+✓ Processed: https://docs.voxel51.com/dataset_zoo/index.html
+✓ Processed: https://lightning.ai/tomershukhman-3ftjt/home
+✓ Processed: https://resources.arc.net/hc/en-us
+✓ Processed: https://www.leumi.co.il/he
+✓ Processed: https://www.amazon.com/s?k=gaming+headsets
+
+Testing sophisticated phishing URLs...
+✓ Processed: https://sudden-hazel-alligator.glitch.me/
+✓ Processed: https://quirky-nebula-almandine.glitch.me/
+✓ Processed: https://www.filmreviewers.com/
+✓ Processed: https://youremotejobs.com/
+✓ Processed: http://amazon-first-project.vercel.app/
+✓ Processed: http://support-docs--ledgre.webflow.io/
+Exception request exception in extract_feature is: HTTPSConnectionPool(host='fedex.com-pf.sbs', port=443): Max retries exceeded with url: /us/payment.html (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x1250deea0>: Failed to resolve 'fedex.com-pf.sbs' ([Errno 8] nodename nor servname provided, or not known)"))
+✓ Processed: https://fedex.com-pf.sbs/us/payment.html
+✓ Processed: https://www.appshop-allegro.com/
+✓ Processed: http://applynflix.com/
+✓ Processed: https://www.whatsapp-direct.ru/
+✓ Processed: https://airbnb-v2-navy.vercel.app/
+
+Results:
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| URL                                                             | True Label   | Prediction   | Correctness   | Processing Time   |
++=================================================================+==============+==============+===============+===================+
+| https://www.aiismath.com/                                       | Legitimate   | Legitimate   | ✓ Correct     | 1.35s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.youtube.com/playlist?list=PLmWq-5VQxdn533RW5XgpC... | Legitimate   | Legitimate   | ✓ Correct     | 1.61s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.visidata.org/credits/                               | Legitimate   | Legitimate   | ✓ Correct     | 11.58s            |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://phishtank.org/                                          | Legitimate   | Legitimate   | ✓ Correct     | 2.28s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://docs.voxel51.com/dataset_zoo/index.html                 | Legitimate   | Legitimate   | ✓ Correct     | 0.96s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://lightning.ai/tomershukhman-3ftjt/home                   | Legitimate   | Legitimate   | ✓ Correct     | 1.24s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://resources.arc.net/hc/en-us                              | Legitimate   | Legitimate   | ✓ Correct     | 0.71s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.leumi.co.il/he                                      | Legitimate   | Legitimate   | ✓ Correct     | 1.02s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.amazon.com/s?k=gaming+headsets                      | Legitimate   | Legitimate   | ✓ Correct     | 1.68s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://sudden-hazel-alligator.glitch.me/                       | Phishing     | Phishing     | ✓ Correct     | 1.40s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://quirky-nebula-almandine.glitch.me/                      | Phishing     | Phishing     | ✓ Correct     | 1.72s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.filmreviewers.com/                                  | Phishing     | Legitimate   | ✗ Wrong       | 1.01s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://youremotejobs.com/                                      | Phishing     | Legitimate   | ✗ Wrong       | 3.56s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| http://amazon-first-project.vercel.app/                         | Phishing     | Phishing     | ✓ Correct     | 0.39s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| http://support-docs--ledgre.webflow.io/                         | Phishing     | Phishing     | ✓ Correct     | 1.50s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://fedex.com-pf.sbs/us/payment.html                        | Phishing     | Phishing     | ✓ Correct     | 0.99s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.appshop-allegro.com/                                | Phishing     | Legitimate   | ✗ Wrong       | 4.13s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| http://applynflix.com/                                          | Phishing     | Legitimate   | ✗ Wrong       | 14.72s            |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://www.whatsapp-direct.ru/                                 | Phishing     | Phishing     | ✓ Correct     | 2.10s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+| https://airbnb-v2-navy.vercel.app/                              | Phishing     | Phishing     | ✓ Correct     | 0.46s             |
++-----------------------------------------------------------------+--------------+--------------+---------------+-------------------+
+
+Summary:
+Total URLs tested: 20
+Predicted legitimate: 13 (65.0%)
+Predicted phishing: 7 (35.0%)
+Average processing time: 2.72s
+
+Confusion Matrix:
+True \ Predicted |  Legitimate  |  Phishing  
+---------------------------------------------
+Legitimate      |      9       |     0     
+Phishing        |      4       |     7     
+
+Confusion matrix visualization saved as 'confusion_matrix.png'
+
+Performance Metrics:
+Accuracy:  0.8000
+Precision: 0.6364
+Recall:    1.0000
+F1 Score:  0.7778
+
+False Negative Examples (Phishing URLs classified as Legitimate):
+1. https://www.filmreviewers.com/
+2. https://youremotejobs.com/
+3. https://www.appshop-allegro.com/
+4. http://applynflix.com/

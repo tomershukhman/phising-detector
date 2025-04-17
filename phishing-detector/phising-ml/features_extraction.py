@@ -117,30 +117,8 @@ def extract_features(url):
         # Check iframe
         features['iframe'] = i_frame(soup)
         
-    except requests.exceptions.RequestException as e:
-        # If can't fetch the page due to request error, set features to suspicious
-        print(f"Exception request exception html/DOM in extract_feature is: {e}")
-        features['favicon'] = -1
-        features['https_token'] = -1 
-        features['request_url'] = -1
-        features['url_of_anchor'] = -1
-        features['links_in_tags'] = -1
-        features['sfh'] = -1
-        features['submitting_to_email'] = -1
-        features['redirect'] = -1
-        features['iframe'] = -1
     except Exception as e:
-        # For any other error, default to suspicious
-        print(f"Exception other html/DOM in extract_feature is: {e}")
-        features['favicon'] = -1
-        features['https_token'] = -1 
-        features['request_url'] = -1
-        features['url_of_anchor'] = -1
-        features['links_in_tags'] = -1
-        features['sfh'] = -1
-        features['submitting_to_email'] = -1
-        features['redirect'] = -1
-        features['iframe'] = -1
+        pass
 
     # External check features
     features['abnormal_url'] = -1 if domain == -1 else abnormal_url(domain, url)
